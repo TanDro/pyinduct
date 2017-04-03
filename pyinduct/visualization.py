@@ -560,7 +560,9 @@ class MplSurfacePlot(DataPlot):
             ax.zaxis.set_rotate_label(False)
             ax.set_zlabel(zlabel, rotation=0)
 
-            ax.plot_surface(xx, yy, z, rstride=2, cstride=2, cmap=plt.cm.cool, antialiased=False)
+            cmap = plt.get_cmap(color_map)
+
+            ax.plot_surface(xx, yy, z, rstride=2, cstride=2, cmap=cmap, antialiased=False)
 
 
 class MplSlicePlot(PgDataPlot):
@@ -574,7 +576,7 @@ class MplSlicePlot(PgDataPlot):
                  legend_location=1, figure_size=(10, 6)):
 
         if not ((isinstance(time_point, Number) ^ isinstance(spatial_point, Number)) and (
-            isinstance(time_point, type(None)) ^ isinstance(spatial_point, type(None)))):
+                    isinstance(time_point, type(None)) ^ isinstance(spatial_point, type(None)))):
             raise TypeError("Only one kwarg *_point can be passed,"
                             "which has to be an instance from type numbers.Number")
 
@@ -617,7 +619,8 @@ def mpl_activate_latex():
     """
     Activate full (label, ticks, ...) latex printing in matplotlib plots.
     """
-    plt.rcParams['text.latex.preamble'] = [r"\usepackage{lmodern}"]
+    plt.rcParams['text.latex.preamble'] = [r"\usepackage{lmodern}",
+                                           r"\usepackage{chemformula}"]
     params = {'text.usetex': True, 'font.size': 15, 'font.family': 'lmodern', 'text.latex.unicode': True,}
     plt.rcParams.update(params)
 
