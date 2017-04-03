@@ -19,6 +19,7 @@ from numbers import Number
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+import matplotlib as mpl
 from pyinduct.tests import show_plots
 
 from .core import complex_wrapper, EvalData, Domain
@@ -305,7 +306,6 @@ class PgAnimatedPlot(PgDataPlot):
 class PgSurfacePlot(PgDataPlot):
     """
     Plot 3 dimensional data as a surface using OpenGl.
-
     Args:
         data (py:class:`pi.EvalData`): Data to display, if the the input-vector
             has length of 2, a 3d surface is plotted, if has length 3, this
@@ -319,7 +319,8 @@ class PgSurfacePlot(PgDataPlot):
         animation_axis (int): Index of the axis to use for animation.
             Not implemented, yet and therefore defaults to 0 by now.
         title (str): Window title to display.
-
+    Todo:
+        py attention to animation axis.
     Note:
         For animation this object spawns a `QTimer` which needs an running
         event loop. Therefore remember to store a reference to this object.
@@ -327,7 +328,6 @@ class PgSurfacePlot(PgDataPlot):
 
     def __init__(self, data, scales=None, animation_axis=0, title=""):
         """
-
         :type data: object
         """
         PgDataPlot.__init__(self, data)
@@ -339,97 +339,128 @@ class PgSurfacePlot(PgDataPlot):
         self.grid_size = 20
 
         # calculate minima and maxima
-        maxima = np.max(
-            [np.array([max(abs(entry)) for entry in data_set.input_data])
-             for data_set in self._data],
-            axis=0)
-        maxima = np.hstack((maxima,
-                             max([data_set.max for data_set in self._data])))
+        extrema_list = []
+        for data_set in self._data:
+            _extrema_list = []
+            for entry in data_set.input_data:
+                _min_max = [min(entry), max(entry)]
+                _extrema_list.append(_min_max)
+
+            extrema_list.append(_extrema_list)
+
+        extrema_arr = np.array(extrema_list)
+
+        extrema = [np.min(extrema_arr[..., 0], axis=0),
+                   np.max(extrema_arr[..., 1], axis=0)]
+
+        extrema = np.hstack((
+            extrema,
+            ([min([data_set.min for data_set in self._data])],
+             [max([data_set.max for data_set in self._data])])))
+
+        deltas = np.diff(extrema, axis=0).squeeze()
+
+        # print("minima: {}".format(extrema[0]))
+        # print("maxima: {}".format(extrema[1]))
+        # print("deltas: {}".format(deltas))
 
         if scales is None:
             # scale all axes uniformly if no scales are given
             _scales = []
-            for value in maxima:
+            for value in deltas:
                 if np.isclose(value, 0):
                     _scales.append(1)
                 else:
                     _scales.append(1/value)
-            self.scales = tuple(_scales)
+            self.scales = np.array(_scales)
         else:
             self.scales = scales
 
+        # print(self.scales)
+        sc_deltas = deltas * self.scales
+
         self.plot_items = []
-        if len(data.input_data) == 3:
-            # 2d system over time -> animate
-            # assume that for 4d data, the first axis is the time
-            for idx, data_set in enumerate(self._data):
+        for idx, data_set in enumerate(self._data):
+            if len(data_set.input_data) == 3:
+                raise NotImplementedError
+
+                # 2d system over time -> animate
+                # assume that for 4d data, the first axis is the time
+                self.scales = np.delete(self.scales, animation_axis)
+                self.index_offset = 1
+
+                cmap = cm.get_cmap(color_map)
+                norm = mpl.colors.Normalize(vmin=extrema[0, -1], vmax=extrema[1, -1])
+                m = cm.ScalarMappable(norm=norm, cmap=cmap)
+                colors = m.to_rgba(self._data[idx].output_data)
+
                 plot_item = gl.GLSurfacePlotItem(
                     x=self.scales[1] * np.atleast_1d(data_set.input_data[1]),
                     y=self.scales[2] * np.flipud(
                         np.atleast_1d(data_set.input_data[2])),
                     z=self.scales[3] * data_set.output_data[0],
-                    shader="normalColor")
+                    colors=colors,
+                    computeNormals=False)
+            else:
+                # 1d system over time -> static
+                self.index_offset = 0
 
-                # plot_item.translate(-max_0 / 2, -max_1 / 2, -grid_height / 2)
-                self.gl_widget.addItem(plot_item)
-                self.plot_items.append(plot_item)
+                cmap = cm.get_cmap(color_map)
+                norm = mpl.colors.Normalize(vmin=extrema[0, -1], vmax=extrema[1, -1])
+                m = cm.ScalarMappable(norm=norm, cmap=cmap)
+                colors = m.to_rgba(self._data[idx].output_data)
 
-            self.index_offset = 1
-            self.t_idx = 0
-            self._timer = pg.QtCore.QTimer(self)
-            self._timer.timeout.connect(self._update_plot)
-            self._timer.start(100)
-        else:
-            # 1d system over time -> static
-            self.index_offset = 0
-            for idx, item in enumerate(self._data):
                 plot_item = gl.GLSurfacePlotItem(
                     x=self.scales[0] * np.atleast_1d(
                         self._data[idx].input_data[0]),
                     y=self.scales[1] * np.flipud(np.atleast_1d(
                         self._data[idx].input_data[1])),
                     z=self.scales[2] * self._data[idx].output_data,
-                    shader="normalColor")
+                    colors=colors,
+                    computeNormals=False)
 
-                # plot_item.translate(-max_0 / 2, -max_1 / 2, -grid_height / 2)
-                self.gl_widget.addItem(plot_item)
-                self.plot_items.append(plot_item)
+            # plot_item.translate(-max_0 / 2, -max_1 / 2, -grid_height / 2)
+            self.gl_widget.addItem(plot_item)
+            self.plot_items.append(plot_item)
 
-        # since gl.GLGridItem.setSize() is broken use gl.GLGridItem.scale()
-        self._xygrid = gl.GLGridItem(size=pg.QtGui.QVector3D(self.grid_size,
-                                                             self.grid_size,
-                                                             1))
+        if self.index_offset == 1:
+            self.t_idx = 0
+            self._timer = pg.QtCore.QTimer(self)
+            self._timer.timeout.connect(self._update_plot)
+            self._timer.start(100)
 
-        # TODO find new compromise here and ad grids again
-        self._xygrid.scale(x=1/self.grid_size,
-                           y=1/self.grid_size,
-                           z=1)
-        # self._xygrid.translate(0, 0, -maxima[-1]*self.scales[-1]/2)
-        self._xygrid.translate(1, 1, 0)
+        self._xygrid = gl.GLGridItem(size=pg.QtGui.QVector3D(1, 1, 1))
+        self._xygrid.setSpacing(sc_deltas[0]/10, sc_deltas[1]/10, 0)
+        self._xygrid.setSize(1.2 * sc_deltas[0], 1.2 * sc_deltas[1], 1)
+        self._xygrid.translate(
+            .5 * sc_deltas[0],
+            .5 * sc_deltas[1],
+            -.1 * sc_deltas[2]
+        )
         self.gl_widget.addItem(self._xygrid)
 
-        # self._ygrid = gl.GLGridItem()
-        # self._ygrid.scale(x=self.scales[0 + self.index_offset],
-        #                   y=self.scales[1 + self.index_offset],
-        #                   z=self.scales[-1])
-        # self._ygrid.rotate(90, 0, 1, 0)
-        # self._ygrid.translate(0,
-        #                       -maxima[1 + self.index_offset]*
-        #                       self.scales[1 + self.index_offset]/2,
-        #                       0)
-        # self.gl_widget.addItem(self._ygrid)
+        self._xzgrid = gl.GLGridItem(size=pg.QtGui.QVector3D(1, 1, 1))
+        self._xzgrid.setSpacing(sc_deltas[0]/10, sc_deltas[2]/10, 0)
+        self._xzgrid.setSize(1.2 * sc_deltas[0], 1.2 * sc_deltas[2], 1)
+        self._xzgrid.rotate(90, 1, 0, 0)
+        self._xzgrid.translate(
+            .5 * sc_deltas[0],
+            1.1 * sc_deltas[1],
+            .5 * sc_deltas[2]
+        )
+        self.gl_widget.addItem(self._xzgrid)
 
-        # self._ygrid = gl.GLGridItem()
-        # self._ygrid.scale(x=grid_height_s, y=max_1_s, z=0)
-        # self._ygrid.rotate(90, 0, 1, 0)
-        # self._ygrid.translate(max_0 / 2, 0, 0)
-        # self.gl_widget.addItem(self._ygrid)
-        #
-        # self._zgrid = gl.GLGridItem()
-        # self._zgrid.scale(x=max_0_s, y=grid_height_s, z=max_1)
-        # self._zgrid.rotate(90, 1, 0, 0)
-        # self._zgrid.translate(0, max_1 / 2, 0)
-        # self.gl_widget.addItem(self._zgrid)
+        self._yzgrid = gl.GLGridItem(size=pg.QtGui.QVector3D(1, 1, 1))
+        self._yzgrid.setSpacing(sc_deltas[1]/10, sc_deltas[2]/10, 0)
+        self._yzgrid.setSize(1.2 * sc_deltas[1], 1.2 * sc_deltas[2], 1)
+        self._yzgrid.rotate(90, 1, 0, 0)
+        self._yzgrid.rotate(90, 0, 0, 1)
+        self._yzgrid.translate(
+            1.1 * sc_deltas[0],
+            .5 * sc_deltas[1],
+            .5 * sc_deltas[2]
+        )
+        self.gl_widget.addItem(self._yzgrid)
 
     def _update_plot(self):
         """
@@ -444,7 +475,7 @@ class PgSurfacePlot(PgDataPlot):
 
         self.t_idx += 1
 
-        # TODO check if array has enough timestamps in it
+        # TODO check if every array has enough timestamps in it
         if self.t_idx >= len(self._data[0].input_data[0]):
             self.t_idx = 0
 
