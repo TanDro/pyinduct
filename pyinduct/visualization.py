@@ -14,6 +14,8 @@ import scipy.interpolate as si
 import pyqtgraph as pg
 import pyqtgraph.exporters
 import pyqtgraph.opengl as gl
+from pyqtgraph.pgcollections import OrderedDict
+
 from numbers import Number
 # Axes3D not explicit used but needed
 from mpl_toolkits.mplot3d import Axes3D
@@ -303,6 +305,105 @@ class PgAnimatedPlot(PgDataPlot):
             return None
 
 
+class AdvancedViewWidget(gl.GLViewWidget):
+    """
+    Adds text labels for x, y and z axis to GLViewWidget
+    """
+    def __init__(self):
+        super(AdvancedViewWidget, self).__init__()
+        self.xlabel = 'x'
+        self.posXLabel = [1, 0, 0]
+        self.ylabel = 'y'
+        self.posYLabel = [0, 1, 0]
+        self.zlabel = 'z'
+        self.posZLabel = [0, 0, 1]
+
+    def setXLabel(self, text, pos):
+        """
+        Sets x label on position
+
+        :param text str: text to render
+        :param pos list: position as list with [x, y, z] coordinate
+        """
+        self.xlabel = text
+        self.posXLabel = pos
+        self.update()
+
+    def setYLabel(self, text, pos):
+        """
+        Sets y label on position
+
+        :param text str: text to render
+        :param pos list: position as list with [x, y, z] coordinate
+        """
+        self.ylabel = text
+        self.posYLabel = pos
+        self.update()
+
+    def setZLabel(self, text, pos):
+        """
+        Sets z label on position
+
+        :param text str: text to render
+        :param pos list: position as list with [x, y, z] coordinate
+        """
+        self.zlabel = text
+        self.posZLabel = pos
+        self.update()
+
+    def paintGL(self, *args, **kwds):
+        """
+        Overrides painGL function to render the labels
+        """
+        gl.GLViewWidget.paintGL(self, *args, **kwds)
+        self.renderText(self.posXLabel[0],
+                        self.posXLabel[1],
+                        self.posXLabel[2],
+                        self.xlabel)
+        self.renderText(self.posYLabel[0],
+                        self.posYLabel[1],
+                        self.posYLabel[2],
+                        self.ylabel)
+        self.renderText(self.posZLabel[0],
+                        self.posZLabel[1],
+                        self.posZLabel[2],
+                        self.zlabel)
+
+
+class ColorBarWidget(pg.GraphicsLayoutWidget):
+    #TODO add doku
+    def __init__(self):
+        super(ColorBarWidget, self).__init__()
+
+        _min = 0
+        _max = 1
+
+        # values axis
+        self.ax = pg.AxisItem('left')
+        self.ax.setRange(_min, _max)
+        self.addItem(self.ax)
+        # colorbar gradients
+        self.gw = pg.GradientEditorItem(orientation='right')
+        self.setCBRange(_min, _max)
+        self.addItem(self.gw)
+
+    def setCBRange(self, _min, _max):
+        cmap = cm.get_cmap(color_map)
+        norm = mpl.colors.Normalize(vmin=_min, vmax=_max)
+        m = cm.ScalarMappable(norm=norm, cmap=cmap)
+
+        gradients = OrderedDict([('bw',
+                                       {'ticks': [(0.0,
+                                                   m.to_rgba(_min, bytes=True)),
+                                                  (0.5,
+                                                   m.to_rgba((_min + _max) / 2, bytes=True)),
+                                                  (1.0,
+                                                   m.to_rgba(_max, bytes=True))],
+                                        'mode': 'rgb'})])
+        self.gw.restoreState(gradients['bw'])
+        self.ax.setRange(_min, _max)
+
+
 class PgSurfacePlot(PgDataPlot):
     """
     Plot 3 dimensional data as a surface using OpenGl.
@@ -326,15 +427,36 @@ class PgSurfacePlot(PgDataPlot):
         event loop. Therefore remember to store a reference to this object.
     """
 
-    def __init__(self, data, scales=None, animation_axis=0, title=""):
+    def __init__(self, data, scales=None, animation_axis=0, title="", zlabel='x(z,t)'):
         """
         :type data: object
         """
         PgDataPlot.__init__(self, data)
-        self.gl_widget = gl.GLViewWidget()
+
+        self.gl_widget = AdvancedViewWidget()
         self.gl_widget.setWindowTitle(time.strftime("%H:%M:%S") + ' - ' + title)
         self.gl_widget.setCameraPosition(distance=1, azimuth=-45)
-        self.gl_widget.show()
+        # self.gl_widget.show()
+        self.cb = ColorBarWidget()
+
+        layout = pg.QtGui.QGridLayout()
+        layout.addWidget(self.gl_widget, 0, 0)
+        layout.addWidget(self.cb, 0, 1)
+
+        layout.setColumnStretch(1, 0)
+        # minimal size of the colorbar
+        layout.setColumnMinimumWidth(1, 120)
+        # Allow 1st column (3D widget) to stretch
+        layout.setColumnStretch(0, 1)
+        # horizontal size set to be large to prompt colormap to a minimum size
+        self.gl_widget.sizeHint = lambda: pg.QtCore.QSize(1700, 800)
+        self.cb.sizeHint = lambda: pg.Qt.QtCore.QSize(100, 800)
+        # this is to remove empty space between
+        layout.setHorizontalSpacing(0)
+
+        self.w = pg.QtGui.QWidget()
+        self.w.setLayout(layout)
+        self.w.show()
 
         self.grid_size = 20
 
@@ -462,6 +584,17 @@ class PgSurfacePlot(PgDataPlot):
         )
         self.gl_widget.addItem(self._yzgrid)
 
+        self.gl_widget.setXLabel('t', pos=[0.5 * sc_deltas[0],
+                                           -0.15 * sc_deltas[1],
+                                           -0.1 * sc_deltas[2]])
+        self.gl_widget.setYLabel('z', pos=[-0.15 * sc_deltas[0],
+                                           0.5 * sc_deltas[1],
+                                           -0.1 * sc_deltas[2]])
+        self.gl_widget.setZLabel(zlabel, pos=[1.1 * sc_deltas[0],
+                                              1.1 * sc_deltas[1],
+                                              1.1 * sc_deltas[2]])
+        self.cb.setCBRange(extrema[0, -1], extrema[1, -1])
+
     def _update_plot(self):
         """
         Update the rendering
@@ -478,6 +611,7 @@ class PgSurfacePlot(PgDataPlot):
         # TODO check if every array has enough timestamps in it
         if self.t_idx >= len(self._data[0].input_data[0]):
             self.t_idx = 0
+
 
 # TODO: alpha
 class PgSlicePlot(PgDataPlot):
