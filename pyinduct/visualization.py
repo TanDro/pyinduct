@@ -356,18 +356,18 @@ class AdvancedViewWidget(gl.GLViewWidget):
         Overrides painGL function to render the labels
         """
         gl.GLViewWidget.paintGL(self, *args, **kwds)
-        self.renderText(self.posXLabel[0],
-                        self.posXLabel[1],
-                        self.posXLabel[2],
-                        self.xlabel)
-        self.renderText(self.posYLabel[0],
-                        self.posYLabel[1],
-                        self.posYLabel[2],
-                        self.ylabel)
-        self.renderText(self.posZLabel[0],
-                        self.posZLabel[1],
-                        self.posZLabel[2],
-                        self.zlabel)
+        # self.renderText(self.posXLabel[0],
+        #                 self.posXLabel[1],
+        #                 self.posXLabel[2],
+        #                 self.xlabel)
+        # self.renderText(self.posYLabel[0],
+        #                 self.posYLabel[1],
+        #                 self.posYLabel[2],
+        #                 self.ylabel)
+        # self.renderText(self.posZLabel[0],
+        #                 self.posZLabel[1],
+        #                 self.posZLabel[2],
+        #                 self.zlabel)
 
 
 class ColorBarWidget(pg.GraphicsLayoutWidget):
@@ -383,25 +383,98 @@ class ColorBarWidget(pg.GraphicsLayoutWidget):
         self.ax.setRange(_min, _max)
         self.addItem(self.ax)
         # colorbar gradients
-        self.gw = pg.GradientEditorItem(orientation='right')
+        cmap = cm.get_cmap(color_map)
+        self.gw = GradientWidget(cmap=cmap)
         self.setCBRange(_min, _max)
         self.addItem(self.gw)
 
     def setCBRange(self, _min, _max):
-        cmap = cm.get_cmap(color_map)
-        norm = mpl.colors.Normalize(vmin=_min, vmax=_max)
-        m = cm.ScalarMappable(norm=norm, cmap=cmap)
-
-        gradients = OrderedDict([('bw',
-                                       {'ticks': [(0.0,
-                                                   m.to_rgba(_min, bytes=True)),
-                                                  (0.5,
-                                                   m.to_rgba((_min + _max) / 2, bytes=True)),
-                                                  (1.0,
-                                                   m.to_rgba(_max, bytes=True))],
-                                        'mode': 'rgb'})])
-        self.gw.restoreState(gradients['bw'])
+        self.gw.setRange(_min, _max)
         self.ax.setRange(_min, _max)
+
+
+class GradientWidget(pg.GraphicsWidget):
+    # TODO docu
+    def __init__(self, cmap=None):
+        pg.GraphicsWidget.__init__(self)
+        self.length = 100
+        self.maxDim = 20
+        self.rectSize = 15
+        self.gradRect = pg.QtGui.QGraphicsRectItem(pg.QtCore.QRectF(0, 0, 100, self.rectSize))
+
+        self.gradRect.setParentItem(self)
+
+        if cmap is None:
+            self.cmap = cm.get_cmap('viridis')
+        else:
+            self.cmap = cmap
+        self._min = 0
+        self._max = 1
+
+        self.setMaxDim(self.rectSize)
+        self.resetTransform()
+        transform = pg.QtGui.QTransform()
+        transform.rotate(270)
+        transform.translate(-self.height(), 0)
+        self.setTransform(transform)
+        self.translate(0, self.rectSize)
+
+        self.updateGradient()
+
+    def widgetLength(self):
+        return self.height()
+
+    def resizeEvent(self, ev):
+        wlen = max(40, self.widgetLength())
+        self.setLength(wlen)
+        self.setMaxDim(self.rectSize)
+        self.resetTransform()
+        transform = pg.QtGui.QTransform()
+        transform.rotate(270)
+        transform.translate(-self.height(), 0)
+        self.setTransform(transform)
+        self.translate(0, self.rectSize)
+
+    def setMaxDim(self, mx=None):
+        if mx is None:
+            mx = self.maxDim
+        else:
+            self.maxDim = mx
+
+        self.setFixedWidth(mx)
+        self.setMaximumHeight(16777215)
+
+    def setLength(self, newLen):
+        self.length = float(newLen)
+        self.gradRect.setRect(1, -self.rectSize, newLen, self.rectSize)
+        self.updateGradient()
+
+    def updateGradient(self):
+        self.gradRect.setBrush(pg.QtGui.QBrush(self.getGradient()))
+
+    def getGradient(self):
+        """Return a QLinearGradient object."""
+        norm = mpl.colors.Normalize(vmin=self._min, vmax=self._max)
+        m = cm.ScalarMappable(norm=norm, cmap=self.cmap)
+
+        g = pg.QtGui.QLinearGradient(pg.QtCore.QPointF(0, 0), pg.QtCore.QPointF(self.length, 0))
+
+        t = np.linspace(0, 1, 3)
+        steps = np.linspace(self._min, self._max, 3)
+        stops = []
+        for idx in range(len(t)):
+            _r, _g, _b, _a = m.to_rgba(steps[idx], bytes=True)
+            qcol = pg.QtGui.QColor(_r, _g, _b, _a)
+            stops.append(tuple([t[idx], qcol]))
+
+        g.setStops(stops)
+
+        return g
+
+    def setRange(self, _min, _max):
+        self._min = _min
+        self._max = _max
+        self.updateGradient()
 
 
 class PgSurfacePlot(PgDataPlot):
@@ -437,6 +510,8 @@ class PgSurfacePlot(PgDataPlot):
         self.gl_widget.setWindowTitle(time.strftime("%H:%M:%S") + ' - ' + title)
         self.gl_widget.setCameraPosition(distance=1, azimuth=-45)
         # self.gl_widget.show()
+        self.cmap = cm.get_cmap(color_map)
+
         self.cb = ColorBarWidget()
 
         layout = pg.QtGui.QGridLayout()
@@ -511,9 +586,8 @@ class PgSurfacePlot(PgDataPlot):
                 self.scales = np.delete(self.scales, animation_axis)
                 self.index_offset = 1
 
-                cmap = cm.get_cmap(color_map)
                 norm = mpl.colors.Normalize(vmin=extrema[0, -1], vmax=extrema[1, -1])
-                m = cm.ScalarMappable(norm=norm, cmap=cmap)
+                m = cm.ScalarMappable(norm=norm, cmap=self.cmap)
                 colors = m.to_rgba(self._data[idx].output_data)
 
                 plot_item = gl.GLSurfacePlotItem(
@@ -527,9 +601,8 @@ class PgSurfacePlot(PgDataPlot):
                 # 1d system over time -> static
                 self.index_offset = 0
 
-                cmap = cm.get_cmap(color_map)
                 norm = mpl.colors.Normalize(vmin=extrema[0, -1], vmax=extrema[1, -1])
-                m = cm.ScalarMappable(norm=norm, cmap=cmap)
+                m = cm.ScalarMappable(norm=norm, cmap=self.cmap)
                 colors = m.to_rgba(self._data[idx].output_data)
 
                 plot_item = gl.GLSurfacePlotItem(
