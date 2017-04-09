@@ -307,7 +307,7 @@ class PgAnimatedPlot(PgDataPlot):
 
 class AdvancedViewWidget(gl.GLViewWidget):
     """
-    Adds text labels for x, y and z axis to GLViewWidget
+    Widget that adds text labels for x, y and z axis to GLViewWidget
     """
     def __init__(self):
         super(AdvancedViewWidget, self).__init__()
@@ -356,22 +356,24 @@ class AdvancedViewWidget(gl.GLViewWidget):
         Overrides painGL function to render the labels
         """
         gl.GLViewWidget.paintGL(self, *args, **kwds)
-        # self.renderText(self.posXLabel[0],
-        #                 self.posXLabel[1],
-        #                 self.posXLabel[2],
-        #                 self.xlabel)
-        # self.renderText(self.posYLabel[0],
-        #                 self.posYLabel[1],
-        #                 self.posYLabel[2],
-        #                 self.ylabel)
-        # self.renderText(self.posZLabel[0],
-        #                 self.posZLabel[1],
-        #                 self.posZLabel[2],
-        #                 self.zlabel)
+        self.renderText(self.posXLabel[0],
+                        self.posXLabel[1],
+                        self.posXLabel[2],
+                        self.xlabel)
+        self.renderText(self.posYLabel[0],
+                        self.posYLabel[1],
+                        self.posYLabel[2],
+                        self.ylabel)
+        self.renderText(self.posZLabel[0],
+                        self.posZLabel[1],
+                        self.posZLabel[2],
+                        self.zlabel)
 
 
 class ColorBarWidget(pg.GraphicsLayoutWidget):
-    #TODO add doku
+    """
+    Widget realizes an axes and a colorbar
+    """
     def __init__(self):
         super(ColorBarWidget, self).__init__()
 
@@ -389,16 +391,25 @@ class ColorBarWidget(pg.GraphicsLayoutWidget):
         self.addItem(self.gw)
 
     def setCBRange(self, _min, _max):
+        """
+        Sets the range of the widgets
+
+        :param _min: minimal value
+        :param _max: maximal value
+        """
         self.gw.setRange(_min, _max)
         self.ax.setRange(_min, _max)
 
 
 class GradientWidget(pg.GraphicsWidget):
-    # TODO docu
+    """
+    Widget realizes a colorbar with a QLinearGradient with a given colormap
+    """
     def __init__(self, cmap=None):
         pg.GraphicsWidget.__init__(self)
         self.length = 100
         self.maxDim = 20
+        self.steps = 11
         self.rectSize = 15
         self.gradRect = pg.QtGui.QGraphicsRectItem(pg.QtCore.QRectF(0, 0, 100, self.rectSize))
 
@@ -459,8 +470,8 @@ class GradientWidget(pg.GraphicsWidget):
 
         g = pg.QtGui.QLinearGradient(pg.QtCore.QPointF(0, 0), pg.QtCore.QPointF(self.length, 0))
 
-        t = np.linspace(0, 1, 3)
-        steps = np.linspace(self._min, self._max, 3)
+        t = np.linspace(0, 1, self.steps)
+        steps = np.linspace(self._min, self._max, self.steps)
         stops = []
         for idx in range(len(t)):
             _r, _g, _b, _a = m.to_rgba(steps[idx], bytes=True)
