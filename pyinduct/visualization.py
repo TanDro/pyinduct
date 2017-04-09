@@ -737,6 +737,34 @@ class PgSlicePlot(PgDataPlot):
         #                           name=data.name)
 
 
+class PgLinePlot2d(PgDataPlot):
+    def __init__(self, data, titleName=''):
+        PgDataPlot.__init__(self, data)
+
+        self.xData = [np.atleast_1d(data_set.input_data[0]) for data_set in self._data]
+        self.yData = [data_set.output_data for data_set in self._data]
+
+        self._pw = pg.plot(title=titleName)
+        self._pw.addLegend()
+        self._pw.showGrid(x=True, y=True, alpha=0.5)
+
+        xData_min = np.min([np.min(data) for data in self.xData])
+        xData_max = np.max([np.max(data) for data in self.xData])
+        self._pw.setXRange(xData_min, xData_max)
+
+        yData_min = np.min([np.min(data) for data in self.yData])
+        yData_max = np.max([np.max(data) for data in self.yData])
+        self._pw.setYRange(yData_min, yData_max)
+
+        self._plot_data_items = []
+        self._plot_indexes = []
+        cls = create_colormap(len(self._data))
+        for idx, data_set in enumerate(self._data):
+            self._plot_indexes.append(0)
+            self._plot_data_items.append(pg.PlotDataItem(pen=pg.mkPen(cls[idx], width=2), name=data_set.name))
+            self._pw.addItem(self._plot_data_items[-1])
+            self._plot_data_items[idx].setData(x=self.xData[idx], y=self.yData[idx])
+
 # TODO: alpha
 class PgLinePlot3d(PgDataPlot):
     """
