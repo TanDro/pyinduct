@@ -517,30 +517,35 @@ class PgSurfacePlot(PgDataPlot):
         """
         PgDataPlot.__init__(self, data)
 
+        layout = pg.QtGui.QGridLayout()
+
         self.gl_widget = AdvancedViewWidget()
         self.gl_widget.setWindowTitle(time.strftime("%H:%M:%S") + ' - ' + title)
         self.gl_widget.setCameraPosition(distance=1, azimuth=-45)
-        # self.gl_widget.show()
         self.cmap = cm.get_cmap(color_map)
 
         self.cb = ColorBarWidget()
 
-        layout = pg.QtGui.QGridLayout()
+        # it's basically
+        self.gl_widget.setSizePolicy(self.cb.sizePolicy())
+        # add 3D widget to the left (first column)
         layout.addWidget(self.gl_widget, 0, 0)
+        # add colorbar to the right (second column)
         layout.addWidget(self.cb, 0, 1)
-
+        # Do not allow 2nd column (colorbar) to stretch
         layout.setColumnStretch(1, 0)
         # minimal size of the colorbar
-        layout.setColumnMinimumWidth(1, 120)
+        layout.setColumnMinimumWidth(1, 60)
         # Allow 1st column (3D widget) to stretch
         layout.setColumnStretch(0, 1)
         # horizontal size set to be large to prompt colormap to a minimum size
         self.gl_widget.sizeHint = lambda: pg.QtCore.QSize(1700, 800)
-        self.cb.sizeHint = lambda: pg.Qt.QtCore.QSize(100, 800)
+        self.cb.sizeHint = lambda: pg.QtCore.QSize(60, 800)
         # this is to remove empty space between
         layout.setHorizontalSpacing(0)
-
+        # set initial size of the window
         self.w = pg.QtGui.QWidget()
+        self.w.resize(800, 800)
         self.w.setLayout(layout)
         self.w.show()
 
@@ -764,6 +769,7 @@ class PgLinePlot2d(PgDataPlot):
             self._plot_data_items.append(pg.PlotDataItem(pen=pg.mkPen(cls[idx], width=2), name=data_set.name))
             self._pw.addItem(self._plot_data_items[-1])
             self._plot_data_items[idx].setData(x=self.xData[idx], y=self.yData[idx])
+
 
 # TODO: alpha
 class PgLinePlot3d(PgDataPlot):
