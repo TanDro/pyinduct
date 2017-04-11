@@ -72,4 +72,11 @@ class PlotTestCase(unittest.TestCase):
                          ylabel='$x(0,t)$',
                          legend_label=['1', '2', '3', '4', '5', '6'])
         if show_plots:
-            plt.show()
+            plt.show
+
+    def test_2d_line_plot(self):
+        data = pi.EvalData(input_data=[self.short_data.input_data[0]],
+                           output_data=self.short_data.output_data[:, 0])
+        pt = vis.PgLinePlot2d(data)
+        if show_plots:
+            app.exec_()
