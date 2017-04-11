@@ -1752,6 +1752,40 @@ class EvalData:
         self.max = output_data.max()
         self.name = name
 
+    def __radd__(self, other):
+        if isinstance(other, numbers.Number):
+            output_data = self.output_data + other
+            return EvalData(input_data=self.input_data,
+                            output_data=output_data)
+        elif isinstance(other, EvalData):
+            assert len(self.input_data) == len(other.input_data)
+
+            input_data = []
+
+            for idx in range(len(self.input_data)):
+                # check if axis have the same length
+                if self.input_data[idx].bounds[0] != other.input_data[idx].bounds[0]:
+                    raise ValueError("lower boundaries doesn't match")
+                if self.input_data[idx].bounds[-1] != other.input_data[idx].bounds[-1]:
+                    raise ValueError("upper boundaries doesn't match")
+                # check witch axis has the smallest discretisation
+                if len(self.input_data[idx]) <= len(other.input_data[idx]):
+                    input_data.append(self.input_data[idx])
+                else:
+                    input_data.append(other.input_data[idx])
+
+            selfInterpolate = self(input_data)
+            otherInterpolate = other(input_data)
+
+            # addition der output array
+            output_data = selfInterpolate.output_data + otherInterpolate.output_data
+
+            return EvalData(input_data=input_data,
+                            output_data=output_data,
+                            name=self.name + " + " + other.name)
+        else:
+            raise NotImplemented
+
     def __add__(self, other):
         if isinstance(other, numbers.Number):
             output_data = self.output_data + other
@@ -1783,6 +1817,40 @@ class EvalData:
             return EvalData(input_data=input_data,
                             output_data=output_data,
                             name=self.name + " + " + other.name)
+        else:
+            raise NotImplemented
+
+    def __rsub__(self, other):
+        if isinstance(other, numbers.Number):
+            output_data = other - self.output_data
+            return EvalData(input_data=self.input_data,
+                            output_data=output_data)
+        elif isinstance(other, EvalData):
+            assert len(self.input_data) == len(other.input_data)
+
+            input_data = []
+
+            for idx in range(len(self.input_data)):
+                # check if axis have the same length
+                if self.input_data[idx].bounds[0] != other.input_data[idx].bounds[0]:
+                    raise ValueError("lower boundaries doesn't match")
+                if self.input_data[idx].bounds[-1] != other.input_data[idx].bounds[-1]:
+                    raise ValueError("upper boundaries doesn't match")
+                # check witch axis has the smallest discretisation
+                if len(self.input_data[idx]) <= len(other.input_data[idx]):
+                    input_data.append(self.input_data[idx])
+                else:
+                    input_data.append(other.input_data[idx])
+
+            selfInterpolate = self(input_data)
+            otherInterpolate = other(input_data)
+
+            # addition der output array
+            output_data = otherInterpolate.output_data - selfInterpolate.output_data
+
+            return EvalData(input_data=input_data,
+                            output_data=output_data,
+                            name=self.name + " - " + other.name)
         else:
             raise NotImplemented
 
@@ -1820,6 +1888,40 @@ class EvalData:
         else:
             raise NotImplemented
 
+    def __rmul__(self, other):
+        if isinstance(other, numbers.Number):
+            output_data = self.output_data * other
+            return EvalData(input_data=self.input_data,
+                            output_data=output_data)
+        elif isinstance(other, EvalData):
+            assert len(self.input_data) == len(other.input_data)
+
+            input_data = []
+
+            for idx in range(len(self.input_data)):
+                # check if axis have the same length
+                if self.input_data[idx].bounds[0] != other.input_data[idx].bounds[0]:
+                    raise ValueError("lower boundaries doesn't match")
+                if self.input_data[idx].bounds[-1] != other.input_data[idx].bounds[-1]:
+                    raise ValueError("upper boundaries doesn't match")
+                # check witch axis has the smallest discretisation
+                if len(self.input_data[idx]) <= len(other.input_data[idx]):
+                    input_data.append(self.input_data[idx])
+                else:
+                    input_data.append(other.input_data[idx])
+
+            selfInterpolate = self(input_data)
+            otherInterpolate = other(input_data)
+
+            # addition der output array
+            output_data = selfInterpolate.output_data * otherInterpolate.output_data
+
+            return EvalData(input_data=input_data,
+                            output_data=output_data,
+                            name=self.name + " * " + other.name)
+        else:
+            raise NotImplemented
+
     def __mul__(self, other):
         if isinstance(other, numbers.Number):
             output_data = self.output_data * other
@@ -1851,6 +1953,44 @@ class EvalData:
             return EvalData(input_data=input_data,
                             output_data=output_data,
                             name=self.name + " * " + other.name)
+        else:
+            raise NotImplemented
+
+    def __matmul__(self, other):
+        if isinstance(other, np.ndarray):
+            if self.output_data.shape != other.shape:
+                raise NotImplemented('Different sizes')
+            output_data = self.output_data @ other
+            return EvalData(input_data=self.input_data,
+                            output_data=output_data)
+        elif isinstance(other, EvalData):
+            assert len(self.input_data) == len(other.input_data)
+            if self.output_data.shape != other.output_data.shape:
+                raise NotImplemented('Different sizes')
+
+            input_data = []
+
+            for idx in range(len(self.input_data)):
+                # check if axis have the same length
+                if self.input_data[idx].bounds[0] != other.input_data[idx].bounds[0]:
+                    raise ValueError("lower boundaries doesn't match")
+                if self.input_data[idx].bounds[-1] != other.input_data[idx].bounds[-1]:
+                    raise ValueError("upper boundaries doesn't match")
+                # check witch axis has the smallest discretisation
+                if len(self.input_data[idx]) <= len(other.input_data[idx]):
+                    input_data.append(self.input_data[idx])
+                else:
+                    input_data.append(other.input_data[idx])
+
+            selfInterpolate = self(input_data)
+            otherInterpolate = other(input_data)
+
+            # addition der output array
+            output_data = selfInterpolate.output_data @ otherInterpolate.output_data
+
+            return EvalData(input_data=input_data,
+                            output_data=output_data,
+                            name=self.name + " @ " + other.name)
         else:
             raise NotImplemented
 
