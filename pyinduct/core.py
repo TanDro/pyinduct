@@ -2,6 +2,7 @@
 In the Core module you can find all basic classes and functions which form the backbone of the toolbox.
 """
 import warnings
+import numbers
 
 import numpy as np
 import collections
@@ -11,7 +12,7 @@ from numbers import Number
 from scipy import integrate
 from scipy.linalg import block_diag
 from scipy.optimize import root
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, interp2d
 
 from .registry import get_base
 
@@ -1751,3 +1752,50 @@ class EvalData:
         self.min = output_data.min()
         self.max = output_data.max()
         self.name = name
+
+    def __getitem__(self, item):
+        assert isinstance(item, list)
+
+    def __add__(self, other):
+        if isinstance(other, numbers.Number):
+            output_data = self.output_data * other
+            return EvalData(input_data=self.input_data,
+                            output_data=output_data)
+        elif isinstance(other, EvalData):
+            # check if input array anzahl stimmt
+            # eval data objekt mit kleinster diskretsierung finden
+            # das andere dahin interpolieren
+            # addition der output array
+            pass
+        else:
+            raise NotImplemented
+
+    def __sub__(self, other):
+        pass
+
+    def __mul__(self, other):
+        pass
+
+    def interpolate(self, pos):
+        assert isinstance(pos, list)
+        print(len(self.input_data))
+        assert len(pos) == len(self.input_data)
+
+        # check interpolation space
+        if self.output_data.ndim == 1:
+            return self._interpolate1d(pos)
+        elif self.output_data.ndim == 2:
+            return self._interpolate2d(pos)
+        elif self.output_data.ndim == 3:
+            raise NotImplemented
+
+    def _interpolate1d(self, pos):
+        # TODO check boundaries
+        results = np.interp(pos[0], self.input_data[0], self.output_data)
+        return results
+
+    def _interpolate2d(self, pos):
+        # TODO check boundaries
+        f = interp2d(self.input_data[1], self.input_data[0], self.output_data)
+        results = f(pos[0], pos[1])
+        return results
