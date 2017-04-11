@@ -1651,8 +1651,8 @@ class Domain(object):
         if points is not None:
             # points are given, easy one
             self._values = np.atleast_1d(points)
-            self._limits = (points.min(), points.max())
-            self._num = points.size
+            self._limits = (self._values.min(), self._values.max())
+            self._num = self._values.size
             # TODO check for evenly spaced entries
             # for now just use provided information
             self._step = step
@@ -1733,7 +1733,6 @@ class EvalData:
     Convenience wrapper for function evaluation.
     Contains the input data that was used for evaluation and the results.
     """
-
     def __init__(self, input_data, output_data, name=""):
         # check type and dimensions
         assert isinstance(input_data, list)
@@ -1753,49 +1752,190 @@ class EvalData:
         self.max = output_data.max()
         self.name = name
 
-    def __getitem__(self, item):
-        assert isinstance(item, list)
-
     def __add__(self, other):
+        if isinstance(other, numbers.Number):
+            output_data = self.output_data + other
+            return EvalData(input_data=self.input_data,
+                            output_data=output_data)
+        elif isinstance(other, EvalData):
+            assert len(self.input_data) == len(other.input_data)
+
+            input_data = []
+
+            for idx in range(len(self.input_data)):
+                # check if axis have the same length
+                if self.input_data[idx].bounds[0] != other.input_data[idx].bounds[0]:
+                    raise ValueError("lower boundaries doesn't match")
+                if self.input_data[idx].bounds[-1] != other.input_data[idx].bounds[-1]:
+                    raise ValueError("upper boundaries doesn't match")
+                # check witch axis has the smallest discretisation
+                if len(self.input_data[idx]) <= len(other.input_data[idx]):
+                    input_data.append(self.input_data[idx])
+                else:
+                    input_data.append(other.input_data[idx])
+
+            selfInterpolate = self(input_data)
+            otherInterpolate = other(input_data)
+
+            # addition der output array
+            output_data = selfInterpolate.output_data + otherInterpolate.output_data
+
+            return EvalData(input_data=input_data,
+                            output_data=output_data,
+                            name=self.name + " + " + other.name)
+        else:
+            raise NotImplemented
+
+    def __sub__(self, other):
+        if isinstance(other, numbers.Number):
+            output_data = self.output_data - other
+            return EvalData(input_data=self.input_data,
+                            output_data=output_data)
+        elif isinstance(other, EvalData):
+            assert len(self.input_data) == len(other.input_data)
+
+            input_data = []
+
+            for idx in range(len(self.input_data)):
+                # check if axis have the same length
+                if self.input_data[idx].bounds[0] != other.input_data[idx].bounds[0]:
+                    raise ValueError("lower boundaries doesn't match")
+                if self.input_data[idx].bounds[-1] != other.input_data[idx].bounds[-1]:
+                    raise ValueError("upper boundaries doesn't match")
+                # check witch axis has the smallest discretisation
+                if len(self.input_data[idx]) <= len(other.input_data[idx]):
+                    input_data.append(self.input_data[idx])
+                else:
+                    input_data.append(other.input_data[idx])
+
+            selfInterpolate = self(input_data)
+            otherInterpolate = other(input_data)
+
+            # addition der output array
+            output_data = selfInterpolate.output_data - otherInterpolate.output_data
+
+            return EvalData(input_data=input_data,
+                            output_data=output_data,
+                            name=self.name + " - " + other.name)
+        else:
+            raise NotImplemented
+
+    def __mul__(self, other):
         if isinstance(other, numbers.Number):
             output_data = self.output_data * other
             return EvalData(input_data=self.input_data,
                             output_data=output_data)
         elif isinstance(other, EvalData):
-            # check if input array anzahl stimmt
-            # eval data objekt mit kleinster diskretsierung finden
-            # das andere dahin interpolieren
+            assert len(self.input_data) == len(other.input_data)
+
+            input_data = []
+
+            for idx in range(len(self.input_data)):
+                # check if axis have the same length
+                if self.input_data[idx].bounds[0] != other.input_data[idx].bounds[0]:
+                    raise ValueError("lower boundaries doesn't match")
+                if self.input_data[idx].bounds[-1] != other.input_data[idx].bounds[-1]:
+                    raise ValueError("upper boundaries doesn't match")
+                # check witch axis has the smallest discretisation
+                if len(self.input_data[idx]) <= len(other.input_data[idx]):
+                    input_data.append(self.input_data[idx])
+                else:
+                    input_data.append(other.input_data[idx])
+
+            selfInterpolate = self(input_data)
+            otherInterpolate = other(input_data)
+
             # addition der output array
-            pass
+            output_data = selfInterpolate.output_data * otherInterpolate.output_data
+
+            return EvalData(input_data=input_data,
+                            output_data=output_data,
+                            name=self.name + " * " + other.name)
         else:
             raise NotImplemented
 
-    def __sub__(self, other):
-        pass
+    def __pow__(self, power, modulo=None):
+        if isinstance(power, numbers.Number):
+            output_data = self.output_data ** power
+            return EvalData(input_data=self.input_data,
+                            output_data=output_data)
+        else:
+            raise NotImplemented
 
-    def __mul__(self, other):
-        pass
+    def __call__(self, pos):
+        assert isinstance(pos, list)
+        assert len(pos) == len(self.input_data)
+
+        _pl = []
+        for i in range(len(pos)):
+            _t = []
+            for j in range(len(pos[i])):
+                if isinstance(pos[i][j], slice):
+                    _t = self.input_data[i][pos[i][j]].tolist()
+                    if _t is None:
+                        raise ValueError('Slice returns None!')
+                    continue
+                else:
+                    _t.append(pos[i][j])
+            _pl.append(_t)
+
+        return self.interpolate(_pl)
 
     def interpolate(self, pos):
         assert isinstance(pos, list)
-        print(len(self.input_data))
         assert len(pos) == len(self.input_data)
 
         # check interpolation space
         if self.output_data.ndim == 1:
-            return self._interpolate1d(pos)
+            values = self._interpolate1d(pos)
+            input_data = Domain(points=pos[0])
+            return EvalData(input_data=[input_data],
+                            output_data=np.array(values),
+                            name=self.name)
         elif self.output_data.ndim == 2:
-            return self._interpolate2d(pos)
+            values = self._interpolate2d(pos)
+            pos0 = Domain(points=pos[0])
+            pos1 = Domain(points=pos[1])
+            input_data = [pos0, pos1]
+            return EvalData(input_data=input_data,
+                            output_data=np.array(values),
+                            name=self.name)
         elif self.output_data.ndim == 3:
             raise NotImplemented
 
     def _interpolate1d(self, pos):
         # TODO check boundaries
-        results = np.interp(pos[0], self.input_data[0], self.output_data)
-        return results
+        return np.interp(pos[0], self.input_data[0], self.output_data)
 
     def _interpolate2d(self, pos):
         # TODO check boundaries
         f = interp2d(self.input_data[1], self.input_data[0], self.output_data)
-        results = f(pos[0], pos[1])
-        return results
+        return f(pos[1], pos[0])
+
+    def sqrt(self):
+        """
+        Function to calculates the value by value root of the output_data array of a EvalData object
+
+        :param evalData:
+        :return: EvalData
+        """
+        output_data = np.sqrt(self.output_data)
+
+        ed = EvalData(input_data=self.input_data,
+                      output_data=output_data,
+                      name=self.name)
+        return ed
+
+    def abs(self):
+        """
+        Function to calculates the absolute value of the output_data array of a EvalData object
+
+        :param evalData:
+        :return: EvalData
+        """
+        output_data = np.abs(self.output_data)
+
+        ed = EvalData(input_data=self.input_data,
+                      output_data=output_data,
+                      name=self.name)
+        return ed
