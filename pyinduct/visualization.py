@@ -491,6 +491,7 @@ class GradientWidget(pg.GraphicsWidget):
 class PgSurfacePlot(PgDataPlot):
     """
     Plot 3 dimensional data as a surface using OpenGl.
+
     Args:
         data (py:class:`pi.EvalData`): Data to display, if the the input-vector
             has length of 2, a 3d surface is plotted, if has length 3, this
@@ -513,6 +514,7 @@ class PgSurfacePlot(PgDataPlot):
 
     def __init__(self, data, scales=None, animation_axis=0, title="", zlabel='x(z,t)'):
         """
+
         :type data: object
         """
         PgDataPlot.__init__(self, data)
