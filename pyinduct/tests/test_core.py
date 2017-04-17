@@ -648,7 +648,12 @@ class EvalDataTestCase(unittest.TestCase):
         self.assertTrue(data.output_data[0] == self.data3.output_data[20])
         self.assertTrue(data.output_data[1] == self.data3.output_data[70])
 
-    def test_interpolate2d(self):
+    def test_interpolate2dAxis2(self):
+        data = self.data1.interpolate([[2], [0.25, 0.5]])
+        self.assertTrue(data.output_data[0, 0] == self.data1.output_data[2, 1])
+        self.assertTrue(data.output_data[0, 1] == self.data1.output_data[2, 2])
+
+    def test_interpolate2dAxis1(self):
         data = self.data1.interpolate([[2, 5], [0.5]])
         self.assertTrue(data.output_data[0, 0] == self.data1.output_data[2, 2])
         self.assertTrue(data.output_data[1, 0] == self.data1.output_data[5, 2])
