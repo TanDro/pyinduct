@@ -35,6 +35,7 @@ __all__ = ["show", "create_colormap", "PgAnimatedPlot", "PgSurfacePlot",
 colors = ["g", "c", "m", "b", "y", "k", "w", "r"]
 color_map = "viridis"
 
+
 # pg.setConfigOption('background', 'w')
 # pg.setConfigOption('foreground', 'k')
 
@@ -310,6 +311,7 @@ class PgAdvancedViewWidget(gl.GLViewWidget):
     """
     OpenGL Widget that depends on GLViewWidget and completes it with text labels for the x, y and z axis
     """
+
     def __init__(self):
         super(PgAdvancedViewWidget, self).__init__()
         self.xlabel = 'x'
@@ -378,6 +380,7 @@ class PgColorBarWidget(pg.GraphicsLayoutWidget):
     """
     OpenGL Widget that depends on GraphicsLayoutWidget and realizes an axis and a color bar
     """
+
     def __init__(self):
         super(PgColorBarWidget, self).__init__()
 
@@ -414,6 +417,7 @@ class PgGradientWidget(pg.GraphicsWidget):
     Args:
         cmap (matplotlib.cm.Colormap): color map, if None viridis is used
     """
+
     def __init__(self, cmap=None):
         pg.GraphicsWidget.__init__(self)
         self.length = 100
