@@ -491,6 +491,7 @@ class GradientWidget(pg.GraphicsWidget):
 class PgSurfacePlot(PgDataPlot):
     """
     Plot 3 dimensional data as a surface using OpenGl.
+
     Args:
         data (py:class:`pi.EvalData`): Data to display, if the the input-vector
             has length of 2, a 3d surface is plotted, if has length 3, this
@@ -504,6 +505,7 @@ class PgSurfacePlot(PgDataPlot):
         animation_axis (int): Index of the axis to use for animation.
             Not implemented, yet and therefore defaults to 0 by now.
         title (str): Window title to display.
+
     Todo:
         py attention to animation axis.
     Note:
@@ -513,6 +515,7 @@ class PgSurfacePlot(PgDataPlot):
 
     def __init__(self, data, scales=None, animation_axis=0, title="", zlabel='x(z,t)'):
         """
+
         :type data: object
         """
         PgDataPlot.__init__(self, data)
@@ -830,18 +833,23 @@ class MplSurfacePlot(DataPlot):
 
             # figure
             fig = plt.figure(figsize=fig_size, facecolor='white')
-            ax = fig.gca(projection='3d')
+            ax = fig.add_subplot(111, projection='3d')
             if keep_aspect:
                 ax.set_aspect('equal', 'box')
-            ax.w_xaxis.set_pane_color((1, 1, 1, 1))
-            ax.w_yaxis.set_pane_color((1, 1, 1, 1))
-            ax.w_zaxis.set_pane_color((1, 1, 1, 1))
+            ax.w_xaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+            ax.w_yaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+            ax.w_zaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
 
             # labels
             ax.set_ylabel('$t$')
             ax.set_xlabel('$z$')
             ax.zaxis.set_rotate_label(False)
             ax.set_zlabel(zlabel, rotation=0)
+
+            # grid
+            ax.w_xaxis._axinfo.update({'grid': {'color': (0, 0, 0, 0.5)}})
+            ax.w_yaxis._axinfo.update({'grid': {'color': (0, 0, 0, 0.5)}})
+            ax.w_zaxis._axinfo.update({'grid': {'color': (0, 0, 0, 0.5)}})
 
             cmap = plt.get_cmap(color_map)
 

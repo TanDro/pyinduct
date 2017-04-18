@@ -2,11 +2,12 @@ import os
 import unittest
 from pickle import loads
 
-import matplotlib.pyplot as plt
-import pyqtgraph as pg
 import pyinduct as pi
 import pyinduct.visualization as vis
 from pyinduct.tests import show_plots
+
+import matplotlib.pyplot as plt
+import pyqtgraph as pg
 
 app = pg.QtGui.QApplication([])
 
