@@ -28,8 +28,9 @@ from .core import complex_wrapper, EvalData, Domain
 from .utils import create_animation, create_dir
 
 __all__ = ["show", "create_colormap", "PgAnimatedPlot", "PgSurfacePlot",
-           "MplSurfacePlot", "MplSlicePlot", "visualize_roots",
-           "visualize_functions"]
+           "PgLinePlot2d", "PgAdvancedViewWidget", "PgColorBarWidget",
+           "PgGradientWidget", "MplSurfacePlot", "MplSlicePlot",
+           "visualize_roots", "visualize_functions"]
 
 colors = ["g", "c", "m", "b", "y", "k", "w", "r"]
 color_map = "viridis"
@@ -111,7 +112,7 @@ def visualize_functions(functions, points=100):
     p_real = pg.PlotItem()
     p_real.addLegend()
     for idx, row in enumerate(data):
-        c = cmap(idx/len(functions), bytes=True)
+        c = cmap(idx / len(functions), bytes=True)
         p_real.plot(row[0], row[1],
                     name="vector {}".format(idx),
                     pen=c)
@@ -129,7 +130,7 @@ def visualize_functions(functions, points=100):
         p_imag = pg.PlotItem()
         # p_imag.addLegend()
         for idx, row in enumerate(data):
-            c = cmap(idx/len(functions), bytes=True)
+            c = cmap(idx / len(functions), bytes=True)
             p_imag.plot(row[0], row[2],
                         name="vector {}".format(idx),
                         pen=c)
@@ -305,12 +306,12 @@ class PgAnimatedPlot(PgDataPlot):
             return None
 
 
-class AdvancedViewWidget(gl.GLViewWidget):
+class PgAdvancedViewWidget(gl.GLViewWidget):
     """
-    Widget that adds text labels for x, y and z axis to GLViewWidget
+    OpenGL Widget that depends on GLViewWidget and completes it with text labels for the x, y and z axis
     """
     def __init__(self):
-        super(AdvancedViewWidget, self).__init__()
+        super(PgAdvancedViewWidget, self).__init__()
         self.xlabel = 'x'
         self.posXLabel = [1, 0, 0]
         self.ylabel = 'y'
@@ -322,8 +323,9 @@ class AdvancedViewWidget(gl.GLViewWidget):
         """
         Sets x label on position
 
-        :param text str: text to render
-        :param pos list: position as list with [x, y, z] coordinate
+        Args:
+            test (str): x axis text to render
+            pos (list): position as list with [x, y, z] coordinate
         """
         self.xlabel = text
         self.posXLabel = pos
@@ -333,8 +335,9 @@ class AdvancedViewWidget(gl.GLViewWidget):
         """
         Sets y label on position
 
-        :param text str: text to render
-        :param pos list: position as list with [x, y, z] coordinate
+        Args:
+            test (str): y axis text to render
+            pos (list): position as list with [x, y, z] coordinate
         """
         self.ylabel = text
         self.posYLabel = pos
@@ -344,8 +347,9 @@ class AdvancedViewWidget(gl.GLViewWidget):
         """
         Sets z label on position
 
-        :param text str: text to render
-        :param pos list: position as list with [x, y, z] coordinate
+        Args:
+            test (str): z axis text to render
+            pos (list): position as list with [x, y, z] coordinate
         """
         self.zlabel = text
         self.posZLabel = pos
@@ -353,7 +357,7 @@ class AdvancedViewWidget(gl.GLViewWidget):
 
     def paintGL(self, *args, **kwds):
         """
-        Overrides painGL function to render the labels
+        Overrides painGL function to render the text labels
         """
         gl.GLViewWidget.paintGL(self, *args, **kwds)
         self.renderText(self.posXLabel[0],
@@ -370,12 +374,12 @@ class AdvancedViewWidget(gl.GLViewWidget):
                         self.zlabel)
 
 
-class ColorBarWidget(pg.GraphicsLayoutWidget):
+class PgColorBarWidget(pg.GraphicsLayoutWidget):
     """
-    Widget realizes an axes and a colorbar
+    OpenGL Widget that depends on GraphicsLayoutWidget and realizes an axis and a color bar
     """
     def __init__(self):
-        super(ColorBarWidget, self).__init__()
+        super(PgColorBarWidget, self).__init__()
 
         _min = 0
         _max = 1
@@ -384,26 +388,31 @@ class ColorBarWidget(pg.GraphicsLayoutWidget):
         self.ax = pg.AxisItem('left')
         self.ax.setRange(_min, _max)
         self.addItem(self.ax)
-        # colorbar gradients
+        # color bar gradients
         cmap = cm.get_cmap(color_map)
-        self.gw = GradientWidget(cmap=cmap)
+        self.gw = PgGradientWidget(cmap=cmap)
         self.setCBRange(_min, _max)
         self.addItem(self.gw)
 
     def setCBRange(self, _min, _max):
         """
-        Sets the range of the widgets
+        Sets the minimal and maximal value of axis and color bar
 
-        :param _min: minimal value
-        :param _max: maximal value
+        Args:
+            _min (float): minimal value
+            _max (float): maximal value
         """
         self.gw.setRange(_min, _max)
         self.ax.setRange(_min, _max)
 
 
-class GradientWidget(pg.GraphicsWidget):
+class PgGradientWidget(pg.GraphicsWidget):
     """
-    Widget realizes a colorbar with a QLinearGradient with a given colormap
+    OpenGL Widget that depends on GraphicsWidget and realizes a color bar that depends on a QGraphicsRectItem and
+    QLinearGradient
+
+    Args:
+        cmap (matplotlib.cm.Colormap): color map, if None viridis is used
     """
     def __init__(self, cmap=None):
         pg.GraphicsWidget.__init__(self)
@@ -411,16 +420,16 @@ class GradientWidget(pg.GraphicsWidget):
         self.maxDim = 20
         self.steps = 11
         self.rectSize = 15
-        self.gradRect = pg.QtGui.QGraphicsRectItem(pg.QtCore.QRectF(0, 0, 100, self.rectSize))
-
-        self.gradRect.setParentItem(self)
+        self._min = 0
+        self._max = 1
 
         if cmap is None:
             self.cmap = cm.get_cmap('viridis')
         else:
             self.cmap = cmap
-        self._min = 0
-        self._max = 1
+
+        self.gradRect = pg.QtGui.QGraphicsRectItem(pg.QtCore.QRectF(0, 0, self.length, self.rectSize))
+        self.gradRect.setParentItem(self)
 
         self.setMaxDim(self.rectSize)
         self.resetTransform()
@@ -432,11 +441,8 @@ class GradientWidget(pg.GraphicsWidget):
 
         self.updateGradient()
 
-    def widgetLength(self):
-        return self.height()
-
     def resizeEvent(self, ev):
-        wlen = max(40, self.widgetLength())
+        wlen = max(40, self.height())
         self.setLength(wlen)
         self.setMaxDim(self.rectSize)
         self.resetTransform()
@@ -447,24 +453,44 @@ class GradientWidget(pg.GraphicsWidget):
         self.translate(0, self.rectSize)
 
     def setMaxDim(self, mx=None):
+        """
+        Sets the maximal width of the color bar widget
+
+        Args:
+             mx (float or None): new width of the color bar widget
+        """
         if mx is None:
             mx = self.maxDim
         else:
             self.maxDim = mx
 
         self.setFixedWidth(mx)
-        self.setMaximumHeight(16777215)
+        self.setMaximumHeight(2**32)
 
     def setLength(self, newLen):
+        """
+        Gets the new length if the window is resize, updates the size and color of QGraphicsRectItem
+
+        Args:
+             newLen: new length of the window
+        """
         self.length = float(newLen)
         self.gradRect.setRect(1, -self.rectSize, newLen, self.rectSize)
         self.updateGradient()
 
     def updateGradient(self):
+        """
+        Updates QGraphicsRectItem color with the gradient
+        """
         self.gradRect.setBrush(pg.QtGui.QBrush(self.getGradient()))
 
     def getGradient(self):
-        """Return a QLinearGradient object."""
+        """
+        Calculates for minimal and maximal value the linear gradient and assigns colors to the gradient.
+
+        Return:
+            pg.QtGui.QLinearGradient: linear gradient for current min and max values
+        """
         norm = mpl.colors.Normalize(vmin=self._min, vmax=self._max)
         m = cm.ScalarMappable(norm=norm, cmap=self.cmap)
 
@@ -483,6 +509,13 @@ class GradientWidget(pg.GraphicsWidget):
         return g
 
     def setRange(self, _min, _max):
+        """
+        Method updates the min and max value of the colar bar and calculates the new gradient trend
+
+        Args:
+            _min (float): set the minimal value of the color bar
+            _max (float): set the maximal value of the color bar
+        """
         self._min = _min
         self._max = _max
         self.updateGradient()
@@ -505,7 +538,7 @@ class PgSurfacePlot(PgDataPlot):
         animation_axis (int): Index of the axis to use for animation.
             Not implemented, yet and therefore defaults to 0 by now.
         title (str): Window title to display.
-
+        zlabel (str): label for the z axis, default value: x(z,t)
     Todo:
         py attention to animation axis.
     Note:
@@ -522,12 +555,15 @@ class PgSurfacePlot(PgDataPlot):
 
         layout = pg.QtGui.QGridLayout()
 
-        self.gl_widget = AdvancedViewWidget()
+        self.gl_widget = PgAdvancedViewWidget()
         self.gl_widget.setWindowTitle(time.strftime("%H:%M:%S") + ' - ' + title)
         self.gl_widget.setCameraPosition(distance=1, azimuth=-45)
         self.cmap = cm.get_cmap(color_map)
 
-        self.cb = ColorBarWidget()
+        self.cb = PgColorBarWidget()
+        windowHeight = 800
+        windowWidth = 800
+        colorbarWidth = 60
 
         # it's basically
         self.gl_widget.setSizePolicy(self.cb.sizePolicy())
@@ -538,17 +574,17 @@ class PgSurfacePlot(PgDataPlot):
         # Do not allow 2nd column (colorbar) to stretch
         layout.setColumnStretch(1, 0)
         # minimal size of the colorbar
-        layout.setColumnMinimumWidth(1, 60)
+        layout.setColumnMinimumWidth(1, colorbarWidth)
         # Allow 1st column (3D widget) to stretch
         layout.setColumnStretch(0, 1)
         # horizontal size set to be large to prompt colormap to a minimum size
-        self.gl_widget.sizeHint = lambda: pg.QtCore.QSize(1700, 800)
-        self.cb.sizeHint = lambda: pg.QtCore.QSize(60, 800)
+        self.gl_widget.sizeHint = lambda: pg.QtCore.QSize(2 * windowWidth, windowHeight)
+        self.cb.sizeHint = lambda: pg.QtCore.QSize(colorbarWidth, windowHeight)
         # this is to remove empty space between
         layout.setHorizontalSpacing(0)
         # set initial size of the window
         self.w = pg.QtGui.QWidget()
-        self.w.resize(800, 800)
+        self.w.resize(windowWidth, windowHeight)
         self.w.setLayout(layout)
         self.w.show()
 
@@ -587,7 +623,7 @@ class PgSurfacePlot(PgDataPlot):
                 if np.isclose(value, 0):
                     _scales.append(1)
                 else:
-                    _scales.append(1/value)
+                    _scales.append(1 / value)
             self.scales = np.array(_scales)
         else:
             self.scales = scales
@@ -644,7 +680,7 @@ class PgSurfacePlot(PgDataPlot):
             self._timer.start(100)
 
         self._xygrid = gl.GLGridItem(size=pg.QtGui.QVector3D(1, 1, 1))
-        self._xygrid.setSpacing(sc_deltas[0]/10, sc_deltas[1]/10, 0)
+        self._xygrid.setSpacing(sc_deltas[0] / 10, sc_deltas[1] / 10, 0)
         self._xygrid.setSize(1.2 * sc_deltas[0], 1.2 * sc_deltas[1], 1)
         self._xygrid.translate(
             .5 * sc_deltas[0],
@@ -654,7 +690,7 @@ class PgSurfacePlot(PgDataPlot):
         self.gl_widget.addItem(self._xygrid)
 
         self._xzgrid = gl.GLGridItem(size=pg.QtGui.QVector3D(1, 1, 1))
-        self._xzgrid.setSpacing(sc_deltas[0]/10, sc_deltas[2]/10, 0)
+        self._xzgrid.setSpacing(sc_deltas[0] / 10, sc_deltas[2] / 10, 0)
         self._xzgrid.setSize(1.2 * sc_deltas[0], 1.2 * sc_deltas[2], 1)
         self._xzgrid.rotate(90, 1, 0, 0)
         self._xzgrid.translate(
@@ -665,7 +701,7 @@ class PgSurfacePlot(PgDataPlot):
         self.gl_widget.addItem(self._xzgrid)
 
         self._yzgrid = gl.GLGridItem(size=pg.QtGui.QVector3D(1, 1, 1))
-        self._yzgrid.setSpacing(sc_deltas[1]/10, sc_deltas[2]/10, 0)
+        self._yzgrid.setSpacing(sc_deltas[1] / 10, sc_deltas[2] / 10, 0)
         self._yzgrid.setSize(1.2 * sc_deltas[1], 1.2 * sc_deltas[2], 1)
         self._yzgrid.rotate(90, 1, 0, 0)
         self._yzgrid.rotate(90, 0, 0, 1)
@@ -746,13 +782,21 @@ class PgSlicePlot(PgDataPlot):
 
 
 class PgLinePlot2d(PgDataPlot):
-    def __init__(self, data, titleName=''):
+    """
+    Plots a list of 1D :py:class:`EvalData` objects as a OpenGL line plot
+
+    Args:
+        data (list(:py:class:`EvalData`)): list of objects to plot
+        title (str): title string
+    """
+
+    def __init__(self, data, title=''):
         PgDataPlot.__init__(self, data)
 
         self.xData = [np.atleast_1d(data_set.input_data[0]) for data_set in self._data]
         self.yData = [data_set.output_data for data_set in self._data]
 
-        self._pw = pg.plot(title=titleName)
+        self._pw = pg.plot(title=title)
         self._pw.addLegend()
         self._pw.showGrid(x=True, y=True, alpha=0.5)
 
@@ -810,7 +854,7 @@ class PgLinePlot3d(PgDataPlot):
         for t_idx, t_val in enumerate(t_subsets):
             t_vals = np.array([res.input_data[0][t_val]] * len(z_vals))
             pts = np.vstack([t_vals, z_vals, res.output_data[t_val, :]]).transpose()
-            plt = gl.GLLinePlotItem(pos=pts, color=pg.glColor((t_idx, n * 1.3)), # width=(t_idx + 1) / 10.,
+            plt = gl.GLLinePlotItem(pos=pts, color=pg.glColor((t_idx, n * 1.3)),  # width=(t_idx + 1) / 10.,
                                     width=2, antialias=True)
             self.w.addItem(plt)
 
@@ -833,23 +877,18 @@ class MplSurfacePlot(DataPlot):
 
             # figure
             fig = plt.figure(figsize=fig_size, facecolor='white')
-            ax = fig.add_subplot(111, projection='3d')
+            ax = fig.gca(projection='3d')
             if keep_aspect:
                 ax.set_aspect('equal', 'box')
-            ax.w_xaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
-            ax.w_yaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
-            ax.w_zaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+            ax.w_xaxis.set_pane_color((1, 1, 1, 1))
+            ax.w_yaxis.set_pane_color((1, 1, 1, 1))
+            ax.w_zaxis.set_pane_color((1, 1, 1, 1))
 
             # labels
             ax.set_ylabel('$t$')
             ax.set_xlabel('$z$')
             ax.zaxis.set_rotate_label(False)
             ax.set_zlabel(zlabel, rotation=0)
-
-            # grid
-            ax.w_xaxis._axinfo.update({'grid': {'color': (0, 0, 0, 0.5)}})
-            ax.w_yaxis._axinfo.update({'grid': {'color': (0, 0, 0, 0.5)}})
-            ax.w_zaxis._axinfo.update({'grid': {'color': (0, 0, 0, 0.5)}})
 
             cmap = plt.get_cmap(color_map)
 
@@ -912,7 +951,7 @@ def mpl_activate_latex():
     """
     plt.rcParams['text.latex.preamble'] = [r"\usepackage{lmodern}",
                                            r"\usepackage{chemformula}"]
-    params = {'text.usetex': True, 'font.size': 15, 'font.family': 'lmodern', 'text.latex.unicode': True,}
+    params = {'text.usetex': True, 'font.size': 15, 'font.family': 'lmodern', 'text.latex.unicode': True, }
     plt.rcParams.update(params)
 
 
