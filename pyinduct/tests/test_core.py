@@ -662,9 +662,9 @@ class EvalDataTestCase(unittest.TestCase):
         data = self.data3([[slice(None)]])
         np.testing.assert_array_almost_equal(data.output_data[:], self.data3.output_data[:])
 
-        def test_call1dWrong(self):
-            data = self.data3([[1, 2, slice(None)]])
-            np.testing.assert_array_almost_equal(data.output_data[:], self.data3.output_data[:])
+    def test_call1dWrong(self):
+        data = self.data3([[1, 2, slice(None)]])
+        np.testing.assert_array_almost_equal(data.output_data[:], self.data3.output_data[:])
 
     def test_call2d(self):
         data = self.data1([[slice(None)], [0.75]])

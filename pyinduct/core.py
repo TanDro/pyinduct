@@ -1754,11 +1754,16 @@ class EvalData:
 
     def checkInputAxisInterpolateOutput(self, other):
         """
+        Method checks the discretization and length of self and other input_data axes, and equalize to the minimal
+        discretized axis
 
         Args:
+            other (:py:class:`EvalData`): other EvalData class
 
         Returns:
-
+            list: minimal discretized input_data axis
+            numpy.ndarray: interpolated self output_data array
+            numpy.ndarray: interpolated other output_data array
         """
         input_data = []
 
@@ -1783,16 +1788,19 @@ class EvalData:
     def add(self, other, fromLeft=True):
         """
         Calculates the element wise addition of the output_data arrays of self and other. Method is used to
-        overload + (__add__ (fromLeft=True) or __radd__ (fromLeft=False)) operator. The input_data lists of self and
-        other are compared and the axes with the least discretization are used. The output_data is interpolated to the
-        used axes. The mathematical operation is performed on the interpolated output_data.
+        overload + (__add__ (fromLeft=True) or __radd__ (fromLeft=False)) operator. If other is a :py:class:`EvalData`,
+        the input_data lists of self and other are compared and the axes with the least discretization are used. The
+        output_data is interpolated to the used axes. The mathematical operation is performed on the interpolated
+        output_data. If other is a :class:`numbers.Number`, the self.output_data array is element wise added with
+        other.
+
 
         Args:
-            other number or :py:class:`EvalData`:
+            other (:class:`numbers.Number` or :py:class:`EvalData`): to add number or EvalData object
             fromLeft boolean: addition from left if True or from right if False
 
         Returns:
-            :py:class:`EvalData` with adapted input_data
+            :py:class:`EvalData` with adapted input_data and output_data as result of addition
         """
         if isinstance(other, numbers.Number):
             if fromLeft:
@@ -1830,16 +1838,18 @@ class EvalData:
     def sub(self, other, fromLeft=True):
         """
         Calculates the element wise subtraction of the output_data arrays of self and other. Method is used to
-        overload - (__sub__ (fromLeft=True) or __rsub__ (fromLeft=False)) operator. The input_data lists of self and
-        other are compared and the axes with the least discretization are used. The output_data is interpolated to the
-        used axes. The mathematical operation is performed on the interpolated output_data.
+        overload - (__sub__ (fromLeft=True) or __rsub__ (fromLeft=False)) operator. If other is a :py:class:`EvalData`,
+        the input_data lists of self and other are compared and the axes with the least discretization are used. The
+        output_data is interpolated to the used axes. The mathematical operation is performed on the interpolated
+        output_data. If other is a :class:`numbers.Number`, the self.output_data array is element wise subtracted with
+        other.
 
         Args:
-            other number or :py:class:`EvalData`:
+            other :class:`numbers.Number` or :py:class:`EvalData`: to sub number or EvalData object
             fromLeft boolean: subtraction from left if True or from right if False
 
         Returns:
-            :py:class:`EvalData` with adapted input_data
+            :py:class:`EvalData` with adapted input_data and output_data as result of subtraction
         """
         if isinstance(other, numbers.Number):
             if fromLeft:
@@ -1877,16 +1887,18 @@ class EvalData:
     def mul(self, other, fromLeft=True):
         """
         Calculates the element wise multiplication of the output_data arrays of self and other. Method is used to
-        overload * (__mul__ (fromLeft=True) or __rmul__ (fromLeft=False)) operator. The input_data lists of self and
-        other are compared and the axes with the least discretization are used. The output_data is interpolated to the
-        used axes. The mathematical operation is performed on the interpolated output_data.
+        overload * (__mul__ (fromLeft=True) or __rmul__ (fromLeft=False)) operator. If other is a :py:class:`EvalData`,
+        the input_data lists of self and other are compared and the axes with the least discretization are used. The
+        output_data is interpolated to the used axes. The mathematical operation is performed on the interpolated
+        output_data. If other is a :class:`numbers.Number`, the self.output_data array is element wise multiplied with
+        other.
 
         Args:
-            other number or :py:class:`EvalData`:
+            other :class:`numbers.Number` or :py:class:`EvalData`: to mul number or EvalData object
             fromLeft boolean: multiplication from left if True or from right if False
 
         Returns:
-            :py:class:`EvalData` with adapted input_data
+            :py:class:`EvalData` with adapted input_data and output_data as result of multiplication
         """
         if isinstance(other, numbers.Number):
             output_data = self.output_data * other
@@ -1925,11 +1937,11 @@ class EvalData:
         axes. The mathematical operation is performed on the interpolated output_data.
 
         Args:
-            other :py:class:`EvalData`:
+            other :py:class:`EvalData`: to matrix mul EvalData object
             fromLeft boolean: matrix multiplication from left if True or from right if False
 
         Returns:
-            :py:class:`EvalData` with adapted input_data
+            :py:class:`EvalData` with adapted input_data and output_data as result of matrix multiplication
         """
         if isinstance(other, EvalData):
             assert len(self.input_data) == len(other.input_data)
@@ -1962,10 +1974,10 @@ class EvalData:
         Calculates the power element by element of output_data array
 
         Args:
-            power number: power
+            power (:class:`numbers.Number`): power
 
         Returns:
-            :py:class:`EvalData` with self.input_data and self.output_data**power
+            :py:class:`EvalData` with self.input_data and output_data as result of power
         """
         if isinstance(power, numbers.Number):
             output_data = self.output_data ** power
@@ -2101,7 +2113,7 @@ class EvalData:
         Calculates the element wise root of output_data array
 
         Return:
-             :py:class:`EvalData` object with new output_data
+             :py:class:`EvalData` with self.input_data and output_data as result of root calculation
         """
         output_data = np.sqrt(self.output_data)
 
@@ -2115,7 +2127,7 @@ class EvalData:
         Calculates the element wise absolute value of output_data array
 
         Return:
-             :py:class:`EvalData` object with new output_data
+            :py:class:`EvalData` with self.input_data and output_data as result of absolute value calculation
         """
         output_data = np.abs(self.output_data)
 
