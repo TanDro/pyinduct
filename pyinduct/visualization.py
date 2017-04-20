@@ -469,7 +469,7 @@ class PgGradientWidget(pg.GraphicsWidget):
             self.maxDim = mx
 
         self.setFixedWidth(mx)
-        self.setMaximumHeight(2**32)
+        self.setMaximumHeight(2 ** 32)
 
     def setLength(self, newLen):
         """
@@ -687,9 +687,9 @@ class PgSurfacePlot(PgDataPlot):
         self._xygrid.setSpacing(sc_deltas[0] / 10, sc_deltas[1] / 10, 0)
         self._xygrid.setSize(1.2 * sc_deltas[0], 1.2 * sc_deltas[1], 1)
         self._xygrid.translate(
-            .5 * sc_deltas[0],
-            .5 * sc_deltas[1],
-            -.1 * sc_deltas[2]
+            .5 * (extrema[1][0] + extrema[0][0]) * self.scales[0],
+            .5 * (extrema[1][1] + extrema[0][1]) * self.scales[1],
+            extrema[0][2] * self.scales[2] - 0.1 * sc_deltas[0]
         )
         self.gl_widget.addItem(self._xygrid)
 
@@ -698,9 +698,9 @@ class PgSurfacePlot(PgDataPlot):
         self._xzgrid.setSize(1.2 * sc_deltas[0], 1.2 * sc_deltas[2], 1)
         self._xzgrid.rotate(90, 1, 0, 0)
         self._xzgrid.translate(
-            .5 * sc_deltas[0],
-            1.1 * sc_deltas[1],
-            .5 * sc_deltas[2]
+            .5 * (extrema[1][0] + extrema[0][0]) * self.scales[0],
+            extrema[0][1] * self.scales[1] + 1.1 * sc_deltas[0],
+            .5 * (extrema[1][2] + extrema[0][2]) * self.scales[2]
         )
         self.gl_widget.addItem(self._xzgrid)
 
@@ -710,21 +710,21 @@ class PgSurfacePlot(PgDataPlot):
         self._yzgrid.rotate(90, 1, 0, 0)
         self._yzgrid.rotate(90, 0, 0, 1)
         self._yzgrid.translate(
-            1.1 * sc_deltas[0],
-            .5 * sc_deltas[1],
-            .5 * sc_deltas[2]
+            extrema[0][0] * self.scales[0] + 1.1 * sc_deltas[0],
+            .5 * (extrema[1][1] + extrema[0][1]) * self.scales[1],
+            .5 * (extrema[1][2] + extrema[0][2]) * self.scales[2]
         )
         self.gl_widget.addItem(self._yzgrid)
 
-        self.gl_widget.setXLabel('t', pos=[0.5 * sc_deltas[0],
-                                           -0.15 * sc_deltas[1],
-                                           -0.1 * sc_deltas[2]])
-        self.gl_widget.setYLabel('z', pos=[-0.15 * sc_deltas[0],
-                                           0.5 * sc_deltas[1],
-                                           -0.1 * sc_deltas[2]])
-        self.gl_widget.setZLabel(zlabel, pos=[1.1 * sc_deltas[0],
-                                              1.1 * sc_deltas[1],
-                                              1.1 * sc_deltas[2]])
+        self.gl_widget.setXLabel('t', pos=[extrema[0][0] * self.scales[0] + 0.5 * sc_deltas[0],
+                                           extrema[0][1] * self.scales[1] - 0.15 * sc_deltas[1],
+                                           extrema[0][2] * self.scales[2] - 0.1 * sc_deltas[2]])
+        self.gl_widget.setYLabel('z', pos=[extrema[0][0] * self.scales[0] - 0.15 * sc_deltas[0],
+                                           extrema[0][1] * self.scales[1] + 0.5 * sc_deltas[1],
+                                           extrema[0][2] * self.scales[2] - 0.1 * sc_deltas[2]])
+        self.gl_widget.setZLabel(zlabel, pos=[extrema[0][0] * self.scales[0] + 1.1 * sc_deltas[0],
+                                              extrema[0][1] * self.scales[1] + 1.1 * sc_deltas[1],
+                                              extrema[0][2] * self.scales[2] + 1.1 * sc_deltas[2]])
         self.cb.setCBRange(extrema[0, -1], extrema[1, -1])
 
     def _update_plot(self):
