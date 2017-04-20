@@ -421,32 +421,32 @@ class PgSurfacePlot(PgDataPlot):
         self._xygrid.setSpacing(sc_deltas[0]/10, sc_deltas[1]/10, 0)
         self._xygrid.setSize(1.2 * sc_deltas[0], 1.2 * sc_deltas[1], 1)
         self._xygrid.translate(
-            .5 * sc_deltas[0],
-            .5 * sc_deltas[1],
-            -.1 * sc_deltas[2]
+            .5 * (extrema[1][0] + extrema[0][0]) * self.scales[0],
+            .5 * (extrema[1][1] + extrema[0][1]) * self.scales[1],
+            extrema[0][2] * self.scales[2] - 0.1 * sc_deltas[0]
         )
         self.gl_widget.addItem(self._xygrid)
 
         self._xzgrid = gl.GLGridItem(size=pg.QtGui.QVector3D(1, 1, 1))
-        self._xzgrid.setSpacing(sc_deltas[0]/10, sc_deltas[2]/10, 0)
+        self._xzgrid.setSpacing(sc_deltas[0] / 10, sc_deltas[2] / 10, 0)
         self._xzgrid.setSize(1.2 * sc_deltas[0], 1.2 * sc_deltas[2], 1)
         self._xzgrid.rotate(90, 1, 0, 0)
         self._xzgrid.translate(
-            .5 * sc_deltas[0],
-            1.1 * sc_deltas[1],
-            .5 * sc_deltas[2]
+            .5 * (extrema[1][0] + extrema[0][0]) * self.scales[0],
+            extrema[0][1] * self.scales[1] + 1.1 * sc_deltas[0],
+            .5 * (extrema[1][2] + extrema[0][2]) * self.scales[2]
         )
         self.gl_widget.addItem(self._xzgrid)
 
         self._yzgrid = gl.GLGridItem(size=pg.QtGui.QVector3D(1, 1, 1))
-        self._yzgrid.setSpacing(sc_deltas[1]/10, sc_deltas[2]/10, 0)
+        self._yzgrid.setSpacing(sc_deltas[1] / 10, sc_deltas[2] / 10, 0)
         self._yzgrid.setSize(1.2 * sc_deltas[1], 1.2 * sc_deltas[2], 1)
         self._yzgrid.rotate(90, 1, 0, 0)
         self._yzgrid.rotate(90, 0, 0, 1)
         self._yzgrid.translate(
-            1.1 * sc_deltas[0],
-            .5 * sc_deltas[1],
-            .5 * sc_deltas[2]
+            extrema[0][0] * self.scales[0] + 1.1 * sc_deltas[0],
+            .5 * (extrema[1][1] + extrema[0][1]) * self.scales[1],
+            .5 * (extrema[1][2] + extrema[0][2]) * self.scales[2]
         )
         self.gl_widget.addItem(self._yzgrid)
 

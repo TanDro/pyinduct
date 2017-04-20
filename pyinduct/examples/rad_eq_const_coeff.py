@@ -19,8 +19,8 @@ l = 1
 T = 1
 actuation_type = 'robin'
 bound_cond_type = 'robin'
-spatial_domain = pi.Domain(bounds=(0, l), num=n_fem)
-temporal_domain = pi.Domain(bounds=(0, 1), num=100)
+spatial_domain = pi.Domain(bounds=(-l, l), num=n_fem)
+temporal_domain = pi.Domain(bounds=(0.1, 1.1), num=100)
 n = n_modal
 
 # original system parameter
