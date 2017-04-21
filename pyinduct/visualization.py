@@ -530,12 +530,12 @@ class PgSurfacePlot(PgDataPlot):
     Plot 3 dimensional data as a surface using OpenGl.
 
     Args:
-        data (py:class:`pi.EvalData`): Data to display, if the the input-vector
+        data (:py:class:`pyinduct.core.EvalData`): Data to display, if the the input-vector
             has length of 2, a 3d surface is plotted, if has length 3, this
             surface is animated. Hereby, the time axis is assumed to be the
             first entry of the input vector.
         scales (tuple): Factors to scale the displayed data, each entry
-            corresponds to an axis in the input vector with on additional scale
+            corresponds to an axis in the input vector with one additional scale
             for the *output_data*. It therefore must be of the size:
             `len(input_data) + 1` . If no scale is given, all axis are scaled
             uniformly.
@@ -545,6 +545,7 @@ class PgSurfacePlot(PgDataPlot):
         zlabel (str): label for the z axis, default value: x(z,t)
     Todo:
         py attention to animation axis.
+
     Note:
         For animation this object spawns a `QTimer` which needs an running
         event loop. Therefore remember to store a reference to this object.
@@ -561,7 +562,7 @@ class PgSurfacePlot(PgDataPlot):
 
         self.gl_widget = PgAdvancedViewWidget()
         self.gl_widget.setWindowTitle(time.strftime("%H:%M:%S") + ' - ' + title)
-        self.gl_widget.setCameraPosition(distance=1, azimuth=-45)
+        self.gl_widget.setCameraPosition(distance=3, azimuth=-135)
         self.cmap = cm.get_cmap(color_map)
 
         self.cb = PgColorBarWidget()
@@ -591,6 +592,8 @@ class PgSurfacePlot(PgDataPlot):
         self.w.resize(windowWidth, windowHeight)
         self.w.setLayout(layout)
         self.w.show()
+        self.gl_widget.setCameraPosition(distance=3, azimuth=-135)
+        self.gl_widget.show()
 
         self.grid_size = 20
 
@@ -673,7 +676,6 @@ class PgSurfacePlot(PgDataPlot):
                     colors=colors,
                     computeNormals=False)
 
-            # plot_item.translate(-max_0 / 2, -max_1 / 2, -grid_height / 2)
             self.gl_widget.addItem(plot_item)
             self.plot_items.append(plot_item)
 
@@ -716,16 +718,27 @@ class PgSurfacePlot(PgDataPlot):
         )
         self.gl_widget.addItem(self._yzgrid)
 
-        self.gl_widget.setXLabel('t', pos=[extrema[0][0] * self.scales[0] + 0.5 * sc_deltas[0],
-                                           extrema[0][1] * self.scales[1] - 0.15 * sc_deltas[1],
-                                           extrema[0][2] * self.scales[2] - 0.1 * sc_deltas[2]])
-        self.gl_widget.setYLabel('z', pos=[extrema[0][0] * self.scales[0] - 0.15 * sc_deltas[0],
-                                           extrema[0][1] * self.scales[1] + 0.5 * sc_deltas[1],
-                                           extrema[0][2] * self.scales[2] - 0.1 * sc_deltas[2]])
-        self.gl_widget.setZLabel(zlabel, pos=[extrema[0][0] * self.scales[0] + 1.1 * sc_deltas[0],
-                                              extrema[0][1] * self.scales[1] + 1.1 * sc_deltas[1],
-                                              extrema[0][2] * self.scales[2] + 1.1 * sc_deltas[2]])
+        self.gl_widget.setXLabel('t', pos=[
+            extrema[0][0] * self.scales[0] + sc_deltas[0] - self.scales[0] * extrema[1][0],
+            extrema[0][1] * self.scales[1] + 0.35 * sc_deltas[1] - self.scales[1] * extrema[1][1],
+            extrema[0][2] * self.scales[2] + 0.4 * sc_deltas[2] - self.scales[2] * extrema[1][2]])
+        self.gl_widget.setYLabel('z', pos=[
+            extrema[0][0] * self.scales[0] + 0.35 * sc_deltas[0] - self.scales[0] * extrema[1][0],
+            extrema[0][1] * self.scales[1] + sc_deltas[1] - self.scales[1] * extrema[1][1],
+            extrema[0][2] * self.scales[2] + 0.4 * sc_deltas[2] - self.scales[2] * extrema[1][2]])
+        self.gl_widget.setZLabel(zlabel, pos=[
+            extrema[0][0] * self.scales[0] + 1.6 * sc_deltas[0] - self.scales[0] * extrema[1][0],
+            extrema[0][1] * self.scales[1] + 1.6 * sc_deltas[1] - self.scales[1] * extrema[1][1],
+            extrema[0][2] * self.scales[2] + 1.6 * sc_deltas[2] - self.scales[2] * extrema[1][2]])
         self.cb.setCBRange(extrema[0, -1], extrema[1, -1])
+
+        # set origin (zoom point) to the middle of the figure
+        # (a better way would be to realize it directly via a method of
+        # self.gl_widget, instead to shift all items)
+        [item.translate(-self.scales[0] * extrema[1][0] + sc_deltas[0] / 2,
+                        -self.scales[1] * extrema[1][1] + sc_deltas[1] / 2,
+                        -self.scales[2] * extrema[1][2] + sc_deltas[2] / 2)
+         for item in self.gl_widget.items]
 
     def _update_plot(self):
         """
