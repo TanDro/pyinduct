@@ -804,12 +804,12 @@ class PgLinePlot2d(PgDataPlot):
         self._pw.addLegend()
         self._pw.showGrid(x=True, y=True, alpha=0.5)
 
-        xData_min = np.min([np.min(data) for data in self.xData])
-        xData_max = np.max([np.max(data) for data in self.xData])
+        xData_min = np.nanmin([np.nanmin(data) for data in self.xData])
+        xData_max = np.nanmax([np.nanmax(data) for data in self.xData])
         self._pw.setXRange(xData_min, xData_max)
 
-        yData_min = np.min([np.min(data) for data in self.yData])
-        yData_max = np.max([np.max(data) for data in self.yData])
+        yData_min = np.nanmin([np.nanmin(data) for data in self.yData])
+        yData_max = np.nanmax([np.nanmax(data) for data in self.yData])
         self._pw.setYRange(yData_min, yData_max)
 
         self._plot_data_items = []
