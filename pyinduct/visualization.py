@@ -881,7 +881,18 @@ class MplSurfacePlot(DataPlot):
     Plot as 3d surface.
     """
 
-    def __init__(self, data, keep_aspect=False, fig_size=(12, 8), zlabel='$\quad x(z,t)$'):
+    def __init__(self,
+                 data,
+                 keep_aspect=False,
+                 fig_size=(12, 8),
+                 xlabel='$z$',
+                 ylabel='$t$',
+                 zlabel='$\quad x(z,t)$',
+                 saveFig=False,
+                 figName='1.eps',
+                 rstride=2,
+                 cstride=2,
+                 contour=False):
         DataPlot.__init__(self, data)
 
         for i in range(len(self._data)):
@@ -902,14 +913,42 @@ class MplSurfacePlot(DataPlot):
             ax.w_zaxis.set_pane_color((1, 1, 1, 1))
 
             # labels
-            ax.set_ylabel('$t$')
-            ax.set_xlabel('$z$')
+            ax.set_ylabel(ylabel)
+            ax.set_xlabel(xlabel)
             ax.zaxis.set_rotate_label(False)
-            ax.set_zlabel(zlabel, rotation=0)
+            ax.set_zlabel(zlabel, rotation=90)
 
             cmap = plt.get_cmap(color_map)
 
-            ax.plot_surface(xx, yy, z, rstride=2, cstride=2, cmap=cmap, antialiased=False)
+            ax.plot_surface(xx, yy, z, rstride=rstride, cstride=cstride, cmap=cmap, antialiased=False)
+            if saveFig:
+                fig.savefig(figName, format='pdf', dpi=1200)
+
+            if contour:
+                fig = plt.figure(figsize=fig_size, facecolor='white')
+                ax = fig.gca()
+                ax.contour(xx, yy, z, 800, cmap=cmap)
+                ax.set_ylabel(ylabel)
+                ax.set_xlabel(xlabel)
+                fig.savefig("contour_x_" + str(figName), format='pdf', dpi=1200)
+
+                fig = plt.figure(figsize=fig_size, facecolor='white')
+                ax = fig.gca()
+                ax.contour(yy, z, xx, 800, cmap=cmap)
+                # ax.set_xlim([0.001, 0.02])
+                # ax.set_ylim([0, 20])
+                ax.set_ylabel(zlabel)
+                ax.set_xlabel(xlabel)
+                fig.savefig("contour_z_" + str(figName), format='pdf', dpi=1200)
+
+                fig = plt.figure(figsize=fig_size, facecolor='white')
+                ax = fig.gca()
+                ax.contour(xx, z, yy, 800, cmap=cmap)
+                # ax.set_xlim([100, 400])
+                # ax.set_ylim([0, 20])
+                ax.set_ylabel(zlabel)
+                ax.set_xlabel(ylabel)
+                fig.savefig("contour_y_" + str(figName), format='pdf', dpi=1200)
 
 
 class MplSlicePlot(PgDataPlot):
