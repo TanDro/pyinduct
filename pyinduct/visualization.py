@@ -827,10 +827,11 @@ class PgLinePlot2d(PgDataPlot):
 
         self._plot_data_items = []
         self._plot_indexes = []
-        cls = create_colormap(len(self._data))
+        cmap = cm.get_cmap(color_map)
         for idx, data_set in enumerate(self._data):
             self._plot_indexes.append(0)
-            self._plot_data_items.append(pg.PlotDataItem(pen=pg.mkPen(cls[idx], width=2), name=data_set.name))
+            self._plot_data_items.append(pg.PlotDataItem(pen=pg.mkPen(cmap(idx / len(self._data), bytes=True),
+                                                         width=2), name=data_set.name))
             self._pw.addItem(self._plot_data_items[-1])
             self._plot_data_items[idx].setData(x=self.xData[idx], y=self.yData[idx])
 
