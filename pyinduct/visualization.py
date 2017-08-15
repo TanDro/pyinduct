@@ -1,10 +1,11 @@
 """
-Here are some frequently used plot types with the packages :py:mod:`pyqtgraph` and/or :py:mod:`matplotlib` implemented.
-The respective :py:mod:`pyinduct.visualization` plotting function get an :py:class:`EvalData` object whose definition
-also placed in this module.
-A :py:class:`EvalData`-object in turn can easily generated from simulation data.
-The function :py:func:`pyinduct.simulation.simulate_system` for example already provide the simulation result
-as EvalData object.
+Here are some frequently used plot types with the packages :py:mod:`pyqtgraph`
+and/or :py:mod:`matplotlib` implemented. The respective
+:py:mod:`pyinduct.visualization` plotting function get an :py:class:`.EvalData`
+object whose definition also placed in this module.
+A :py:class:`.EvalData`-object in turn can easily generated from simulation
+data. The function :py:func:`pyinduct.simulation.simulate_system` for example
+already provide the simulation result as EvalData object.
 """
 
 import numpy as np
@@ -14,14 +15,12 @@ import scipy.interpolate as si
 import pyqtgraph as pg
 import pyqtgraph.exporters
 import pyqtgraph.opengl as gl
-from pyqtgraph.pgcollections import OrderedDict
-
-from numbers import Number
-# Axes3D not explicit used but needed
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 import matplotlib as mpl
+import matplotlib.cm as cm
+import matplotlib.pyplot as plt
+from numbers import Number
+# axes3d not explicit used but needed
+from mpl_toolkits.mplot3d import axes3d
 from pyinduct.tests import show_plots
 
 from .core import complex_wrapper, EvalData, Domain
@@ -34,7 +33,6 @@ __all__ = ["show", "create_colormap", "PgAnimatedPlot", "PgSurfacePlot",
 
 colors = ["g", "c", "m", "b", "y", "k", "w", "r"]
 color_map = "viridis"
-
 
 # pg.setConfigOption('background', 'w')
 # pg.setConfigOption('foreground', 'k')
@@ -76,12 +74,12 @@ def create_colormap(cnt):
 
 def visualize_functions(functions, points=100):
     """
-    Visualizes a set of :py:class:`core.Function` s on
+    Visualizes a set of :py:class:`.Function` s on
     their domain.
 
     Parameters:
         functions (iterable): collection of
-            :py:class:`core.Function` s to display.
+            :py:class:`.Function` s to display.
         points (int): Points to use for sampling
             the domain.
     """
@@ -174,15 +172,18 @@ class PgDataPlot(DataPlot, pg.QtCore.QObject):
 
 class PgAnimatedPlot(PgDataPlot):
     """
-    Wrapper that shows an updating one dimensional plot of n-curves discretized in t time steps and z spatial steps
-    It is assumed that time propagates along axis0 and and location along axis1 of values.
-    values are therefore expected to be a array of shape (n, t, z)
+    Wrapper that shows an updating one dimensional plot of n-curves discretized
+    in t time steps and z spatial steps. It is assumed that time propagates
+    along axis0 and and location along axis1 of values. Values are therefore
+    expected to be a array of shape (n, t, z).
 
     Args:
-        data ((iterable of) :py:class:`EvalData`): results to animate
+        data ((iterable of) :py:class:`.EvalData`): results to animate
         title (basestring): window title
-        refresh_time (int): time in msec to refresh the window must be greater than zero
-        replay_gain (float): values above 1 acc- and below 1 decelerate the playback process, must be greater than zero
+        refresh_time (int): time in msec to refresh the window must be greater
+            than zero
+        replay_gain (float): values above 1 acc- and below 1 decelerate the
+            playback process, must be greater than zero
         save_pics (bool):
         labels: ??
 
@@ -205,9 +206,11 @@ class PgAnimatedPlot(PgDataPlot):
         self._pw.addLegend()
         self._pw.showGrid(x=True, y=True, alpha=0.5)
 
+        min_times = [min(data) for data in self.time_data]
         max_times = [max(data) for data in self.time_data]
-        self._endtime = max(max_times)
-        self._longest_idx = max_times.index(self._endtime)
+        self._start_time = min(min_times)
+        self._end_time = max(max_times)
+        self._longest_idx = max_times.index(self._end_time)
 
         assert refresh_time > 0
         self._tr = refresh_time
@@ -232,7 +235,7 @@ class PgAnimatedPlot(PgDataPlot):
             self._exporter.parameters()['width'] = 1e3
 
             picture_path = create_dir(self._res_path)
-            export_digits = int(np.abs(np.round(np.log10(self._endtime // self._t_step), 0)))
+            export_digits = int(np.abs(np.round(np.log10(self._end_time // self._t_step), 0)))
             # ffmpeg uses c-style format strings
             ff_name = "_".join(
                 [title.replace(" ", "_"), self._time_stamp.replace(":", "_"), "%0{}d".format(export_digits), ".png"])
@@ -256,7 +259,7 @@ class PgAnimatedPlot(PgDataPlot):
             self._pw.addItem(self._plot_data_items[-1])
 
         self._curr_frame = 0
-        self._t = 0
+        self._t = self._start_time
 
         self._timer = pg.QtCore.QTimer(self)
         self._timer.timeout.connect(self._update_plot)
@@ -281,8 +284,8 @@ class PgAnimatedPlot(PgDataPlot):
         self._t += self._t_step
         self._pw.win.setWindowTitle('t= {0:.2f}'.format(self._t))
 
-        if self._t > self._endtime:
-            self._t = 0
+        if self._t > self._end_time:
+            self._t = self._start_time
             if self.save_pics:
                 self._export_complete = True
                 print("saved pictures using mask: " + self._ff_mask)
@@ -530,7 +533,7 @@ class PgSurfacePlot(PgDataPlot):
     Plot 3 dimensional data as a surface using OpenGl.
 
     Args:
-        data (:py:class:`pyinduct.core.EvalData`): Data to display, if the the input-vector
+        data (:py:class:`.EvalData`): Data to display, if the the input-vector
             has length of 2, a 3d surface is plotted, if has length 3, this
             surface is animated. Hereby, the time axis is assumed to be the
             first entry of the input vector.
@@ -745,11 +748,9 @@ class PgSurfacePlot(PgDataPlot):
         Update the rendering
         """
         for idx, item in enumerate(self.plot_items):
-            x_data = self.scales[1] * np.atleast_1d(self._data[idx].input_data[1])
-            y_data = self.scales[2] * np.flipud(
-                np.atleast_1d(self._data[idx].input_data[2]))
-            z_data = self.scales[3] * self._data[idx].output_data[self.t_idx]
-            item.setData(x=x_data, y=y_data, z=z_data)
+            z_data = self._data[idx].output_data[..., self.t_idx]
+            mapped_colors = self.mapping.to_rgba(z_data)
+            item.setData(z=z_data, colors=mapped_colors)
 
         self.t_idx += 1
 
