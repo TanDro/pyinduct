@@ -52,6 +52,7 @@ class TestPlaceHolder(unittest.TestCase):
 
 
 class TestCommonTarget(unittest.TestCase):
+
     def test_call(self):
         t1 = ph.Scalars(np.zeros(2), target_term=dict(name="E", order=1, exponent=1))
         t2 = ph.Scalars(np.zeros(2), target_term=dict(name="E", order=2, exponent=1))
@@ -117,8 +118,7 @@ class ScalarsTest(unittest.TestCase):
         t = ph.Scalars(self.vector)
         t.data = np.atleast_2d(self.vector)
         t.target_term = dict(name="f")
-        t.target_form = None
-
+        t.target_weigth_label = None
 
 class FieldVariableTest(unittest.TestCase):
     def setUp(self):

@@ -2,7 +2,6 @@
 In the Core module you can find all basic classes and functions which form the backbone of the toolbox.
 """
 import warnings
-import numbers
 
 import numpy as np
 import collections
@@ -12,7 +11,7 @@ from numbers import Number
 from scipy import integrate
 from scipy.linalg import block_diag
 from scipy.optimize import root
-from scipy.interpolate import interp1d, interp2d
+from scipy.interpolate import interp1d
 
 from .registry import get_base
 
@@ -58,13 +57,12 @@ class BaseFraction:
         """
         Empty Hint that can return steps for scalar product calculation.
 
-        In detail this means a list object containing function calls to fill
-        with (first, second) parameters that will calculate the scalar product
-        when summed up.
+        In detail this means a list object containing function calls to fill with (first, second) parameters
+        that will calculate the scalar product when summed up.
 
         Note:
             Overwrite to implement custom functionality.
-            For an example implementation see :py:class:`.Function`
+            For an example implementation see :py:class:`Function`
         """
         pass
 
@@ -72,12 +70,12 @@ class BaseFraction:
         """
         Basic implementation of derive function.
         Empty implementation, overwrite to use this functionality.
-        For an example implementation see :py:class:`.Function`
+        For an example implementation see :py:class:`Function`
 
         Args:
             order (:class:`numbers.Number`): derivative order
         Return:
-            :py:class:`.BaseFraction`: derived object
+            :py:class:`BaseFraction`: derived object
         """
         if order == 0:
             return self
@@ -87,9 +85,9 @@ class BaseFraction:
 
     def scale(self, factor):
         """
-        Factory method to obtain instances of this base fraction, scaled by the
-        given factor. Empty function, overwrite to implement custom
-        functionality. For an example implementation see :py:class:`.Function`.
+        Factory method to obtain instances of this base fraction, scaled by the given factor.
+        Empty function, overwrite to implement custom functionality.
+        For an example implementation see :py:class:`Function`
 
         Args:
             factor: Factor to scale the vector.
@@ -116,7 +114,7 @@ class BaseFraction:
         """
         Getter function to access members.
         Empty function, overwrite to implement custom functionality.
-        For an example implementation see :py:class:`.Function`
+        For an example implementation see :py:class:`Function`
 
         Note:
             Empty function, overwrite to implement custom functionality.
@@ -130,22 +128,18 @@ class BaseFraction:
 
 class Function(BaseFraction):
     """
-    Most common instance of a :py:class:`.BaseFraction`.
-    This class handles all tasks concerning derivation and evaluation of
-    functions. It is used broad across the toolbox and therefore incorporates
-    some very specific attributes. For example, to ensure the accurateness of
-    numerical handling functions may only evaluated in areas where they provide
-    nonzero return values. Also their domain has to be taken into account.
-    Therefore the attributes *domain* and *nonzero* are provided.
+    Most common instance of a :py:class:`BaseFraction`.
+    This class handles all tasks concerning derivation and evaluation of functions. It is used broad across the toolbox
+    and therefore incorporates some very specific attributes.
+    For example, to ensure the accurateness of numerical handling functions may only evaluated in areas where they
+    provide nonzero return values. Also their domain has to be taken into account. Therefore the attributes *domain*
+    and *nonzero* are provided.
 
-    To save implementation time, ready to go version like
-    :py:class:`.LagrangeFirstOrder` are provided in the
-    :py:mod:`pyinduct.simulation` module.
+    To save implementation time, ready to go version like :py:class:`pyinduct.shapefunctions.LagrangeFirstOrder`
+    are provided in the :py:mod:`pyinduct.simulation` module.
 
-    For the implementation of new shape functions subclass this implementation
-    or directly provide a callable *eval_handle* and callable
-    *derivative_handles* if spatial derivatives are required for the
-    application. 
+    For the implementation of new shape functions subclass this implementation or directly provide a callable
+    *eval_handle* and callable *derivative_handles* if spatial derivatives are required for the application.
     """
 
     # TODO: overload add and mul operators
@@ -248,9 +242,7 @@ class Function(BaseFraction):
         values = np.atleast_1d(values)
         for interval in self.domain:
             if any(values < interval[0]) or any(values > interval[1]):
-                raise ValueError("Function evaluated outside it's "
-                                 "domain {} with {}".format(self.domain,
-                                                            values))
+                raise ValueError("Function evaluated outside it's domain with {}".format(values))
 
                 # if all(value >= interval[0]) and all(value <= interval[1]):
                 #     in_domain = True
@@ -289,8 +281,8 @@ class Function(BaseFraction):
         """
         Implementation of the abstract parent method.
 
-        Since the :py:class:`.Function` has only one member (itself) the
-        parameter *idx* is ignored and *self* is returned.
+        Since the :py:class:`Function` has only one member (itself) the parameter *idx* is ignored and *self* is
+        returned.
 
         Args:
             idx: ignored.
@@ -329,7 +321,7 @@ class Function(BaseFraction):
 
     def scale(self, factor):
         """
-        Factory method to scale a :py:class:`.Function`.
+        Factory method to scale a :py:class:`pyinduct.core.Function`.
 
         Args:
             factor : :obj:`numbers.Number` or a callable.
@@ -359,22 +351,21 @@ class Function(BaseFraction):
         return new_obj
 
     def derive(self, order=1):
-        r"""
-        Spatially derive this :py:class:`.Function`.
+        """
+        Spatially derive this :py:class:`Function`.
 
-        This is done by neglecting *order* derivative handles and to select
-        handle :math:`\text{order} - 1` as the new evaluation_handle.
+        This is done by neglecting *order* derivative handles and to select handle :math:`\\text{order} - 1` as the new
+        evaluation_handle.
 
         Args:
             order (int): the amount of derivations to perform
 
         Raises:
             TypeError: If *order* is not of type int.
-            ValueError: If the requested derivative order is higher than the
-                provided one.
+            ValueError: If the requested derivative order is higher than the provided one.
 
         Returns:
-            :py:class:`.Function` the derived function.
+            :py:class:`Function` the derived function.
 
         """
         if not isinstance(order, int):
@@ -433,22 +424,21 @@ class Function(BaseFraction):
 
     def scalar_product_hint(self):
         """
-        Return the hint that the :py:func:`.dot_product_l2` has to calculated to
-        gain the scalar product.
+        Return the hint that the :py:func:`pyinduct.core.dot_product_l2` has to calculated to gain the scalar product.
         """
         return [dot_product_l2]
 
     @staticmethod
     def from_constant(constant, **kwargs):
         """
-        Create a :py:class:`.Function` that returns a constant value.
+        Create a :py:class:`Function` that returns a constant value.
 
         Args:
             constant (number): value to return
-            **kwargs: all kwargs get passed to :py:class:`.Function`
+            **kwargs: all kwargs get passed to :py:class:`Function`
 
         Returns:
-            :py:class:`.Function`: A constant function
+            :py:class:`Function`: A constant function
         """
         def f(z):
             return constant
@@ -462,7 +452,7 @@ class Function(BaseFraction):
     @staticmethod
     def from_data(x, y, **kwargs):
         """
-        Create a :py:class:`.Function` based on discrete data by
+        Create a :py:class:`Function` based on discrete data by
         interpolating.
 
         The interpolation is done by using :py:class:`interp1d` from scipy,
@@ -471,10 +461,10 @@ class Function(BaseFraction):
         Args:
             x (array-like): Places where the function has been evaluated .
             y (array-like): Function values at *x*.
-            **kwargs: all kwargs get passed to :py:class:`.Function` .
+            **kwargs: all kwargs get passed to :py:class:`Function` .
 
         Returns:
-            :py:class:`.Function`: An interpolating function.
+            :py:class:`Function`: An interpolating function.
         """
         dom = kwargs.pop("domain", (min(x), max(x)))
         nonzero = kwargs.pop("nonzero", dom)
@@ -498,18 +488,18 @@ class Function(BaseFraction):
 
 
 class ComposedFunctionVector(BaseFraction):
-    r"""
-    Implementation of composite function vector :math:`\boldsymbol{x}`.
+    """
+    Implementation of composite function vector :math:`\\boldsymbol{x}`.
 
     .. math::
-        \boldsymbol{x} = \begin{pmatrix}
-            x_1(z) \\
-            \vdots \\
-            x_n(z) \\
-            \xi_1 \\
-            \vdots \\
-            \xi_m \\
-        \end{pmatrix}
+        \\boldsymbol{x} = \\begin{pmatrix}
+            x_1(z) \\\\
+            \\vdots \\\\
+            x_n(z) \\\\
+            \\xi_1 \\\\
+            \\vdots \\\\
+            \\xi_m \\\\
+        \\end{pmatrix}
     """
 
     def __init__(self, functions, scalars):
@@ -538,27 +528,16 @@ class ComposedFunctionVector(BaseFraction):
 class Base:
     """
     Base class for approximation bases.
-    In general, a :py:class:`.Base` is formed by a certain amount of
-    :py:class:`.BaseFractions` and therefore forms finite-dimensional subspace
-    of the distributed problem's domain. Most of the time, the user does not
-    need to interact with this class.
+    In general, a :py:class:`Base` is formed by a certain amount of :py:class:`BaseFractions` and therefore forms
+    finite-dimensional subspace of the distributed problem's domain. Most of the time, the user does not need to
+    interact with this class.
 
     Args:
-        fractions (iterable of :py:class:`.BaseFraction`): List, array or
-            dict of :py:class:`.BaseFraction`'s
+        fractions (iterable of :py:class:`BaseFraction`): List, Array or Dict of :py:class:`BaseFraction` instances
     """
     def __init__(self, fractions):
         # TODO check if Fractions are consistent in Type and provided hints
         self.fractions = sanitize_input(fractions, BaseFraction)
-
-    def __iter__(self):
-        return iter(self.fractions)
-
-    def __len__(self):
-        return len(self.fractions)
-
-    def __getitem__(self, item):
-        return self.fractions[item]
 
     @staticmethod
     def _transformation_factory(info):
@@ -572,25 +551,22 @@ class Base:
 
     def transformation_hint(self, info):
         """
-        Method that provides a information about how to transform weights from
-        one :py:class:`.BaseFraction` into another.
+        Method that provides a information about how to transform weights from one :py:class:`BaseFraction` into
+        another.
 
-        In Detail this function has to return a callable, which will take the
-        weights of the source- and return the weights of the target system. It
-        may have keyword arguments for other data which is required to perform
-        the transformation. Information about these extra keyword arguments
-        should be provided in form of a dictionary whose keys are keyword
-        arguments of the returned transformation handle.
+        In Detail this function has to return a callable, which will take the weights of the source- and return the
+        weights of the target system. It may have keyword arguments for other data which is required to perform the
+        transformation.
+        Information about these extra keyword arguments should be provided in form of a dictionary whose keys are
+        keyword arguments of the returned transformation handle.
 
         Note:
-            This implementation covers the most basic case, where the two
-            :py:class:`.BaseFraction`'s are of same type. For any other case it
-            will raise an exception. Overwrite this Method in your
-            implementation to support conversion between bases that differ from
-            yours.
+            This implementation covers the most basic case, where the two :py:class:`BaseFraction` s are of same type.
+            For any other case it will raise an exception.
+            Overwrite this Method in your implementation to support conversion between bases that differ from yours.
 
         Args:
-            info: :py:class:`.TransformationInfo`
+            info: :py:class:`TransformationInfo`
 
         Raises:
             NotImplementedError:
@@ -606,12 +582,10 @@ class Base:
 
     def scalar_product_hint(self):
         """
-        Hint that returns steps for scalar product calculation with elements of
-        this base.
-        
+        Hint that returns steps for scalar product calculation with elements of this base.
         Note:
             Overwrite to implement custom functionality.
-            For an example implementation see :py:class:`.Function`
+            For an example implementation see :py:class:`Function`
         """
         return self.fractions[0].scalar_product_hint()
 
@@ -619,12 +593,12 @@ class Base:
         """
         Basic implementation of derive function.
         Empty implementation, overwrite to use this functionality.
-        For an example implementation see :py:class:`.Function`
+        For an example implementation see :py:class:`Function`
 
         Args:
             order (:class:`numbers.Number`): derivative order
         Return:
-            :py:class:`.Base`: derived object
+            :py:class:`Base`: derived object
         """
         if order == 0:
             return self
@@ -641,7 +615,7 @@ class Base:
         if factor == 1:
             return self
         else:
-            return self.__class__([f.scale(factor) for f in self.fractions])
+            return self.__class__([f.scacle(factor) for f in self.fractions])
 
     def raise_to(self, power):
         """
@@ -684,8 +658,7 @@ class StackedBase(Base):
         return `None`
 
         Args:
-            info (:py:class:`.TransformationInfo`): Information about the
-                requested transformation.
+            info (:py:class:`TransformationInfo`): Information about the requested transformation.
         Return:
             transformation handle
 
@@ -697,9 +670,8 @@ class StackedBase(Base):
         # we can help
         start_idx = self._info[info.dst_lbl]["start"]
         sel_len = self._info[info.dst_lbl]["size"]
-        src_ord = self._info[info.dst_lbl]["order"]
         trans_mat = calculate_expanded_base_transformation_matrix(info.dst_base, info.dst_base,
-                                                                  src_ord, info.dst_order,
+                                                                  info.src_order, info.dst_order,
                                                                   use_eye=True)
 
         def selection_func(weights):
@@ -713,8 +685,8 @@ def domain_intersection(first, second):
     Calculate intersection(s) of two domains.
 
     Args:
-        first (:py:class:`.Domain`): first domain
-        second (:py:class:`.Domain`): second domain
+        first (:py:class:`core.Domain`): first domain
+        second (:py:class:`core.Domain`): second domain
 
     Return:
         list: intersection(s) given by (start, end) tuples.
@@ -784,8 +756,8 @@ def _dot_product_l2(first, second):
     Calculates the inner product of two functions.
 
     Args:
-        first (:py:class:`.Function`): first function
-        second (:py:class:`.Function`): second function
+        first (:py:class:`pyinduct.core.Function`): first function
+        second (:py:class:`pyinduct.core.Function`): second function
 
     Todo:
         rename to scalar_dot_product and make therefore non private
@@ -825,8 +797,7 @@ def _dot_product_l2(first, second):
 
 def integrate_function(function, interval):
     """
-    Integrates the given *function* over the *interval* using
-    :func:`.complex_quadrature`.
+    Integrates the given *function* over the *interval* using :func:`complex_quadrature`.
 
     Args:
         function(callable): Function to integrate.
@@ -934,29 +905,25 @@ def calculate_scalar_matrix(values_a, values_b):
 
 def calculate_scalar_product_matrix(scalar_product_handle, base_a, base_b,
                                     optimize=False):
-    r"""
-    Calculates a matrix :math:`A` , whose elements are the scalar products of
-    each element from *base_a* and *base_b*, so that
-    :math:`a_{ij} = \langle \mathrm{a}_i\,,\: \mathrm{b}_j\rangle`.
+    """
+    Calculates a matrix :math:`A` , whose elements are the scalar products of each element from *base_a* and *base_b*,
+    so that :math:`a_{ij} = \\langle \\mathrm{a}_i\\,,\\: \\mathrm{b}_j\\rangle`.
 
     Args:
-        scalar_product_handle (callable): function handle that is called to
-            calculate the scalar product. This function has to be able to cope
-            with (1d) vectorial input.
-        base_a (:py:class:`.Base`): Basis a
-        base_b (:py:class:`.Base`): Basis b
-        optimize (bool): Switch to turn on the symmetry based speed up.
-            For development purposes only.
+        scalar_product_handle (callable): function handle that is called to calculate the scalar product.
+            This function has to be able to cope with (1d) vectorial input.
+        base_a (:py:class:`Base`): Basis a
+        base_b (:py:class:`Base`): Basis b
+        optimize (bool): switch to turn on the symmetry based speed up. For development purposes only.
 
     TODO:
-        making use of the commutable scalar product could save time,
-        run some test on this
+        making use of the commutable scalar product could save time, run some test on this
 
     Return:
         numpy.ndarray: matrix :math:`A`
     """
     fractions_a = base_a.fractions
-    fractions_b = base_b.fractions
+    fracstion_b = base_b.fractions
 
     if optimize:
         raise NotImplementedError("this approach leads to wrong results atm.")
@@ -1027,22 +994,22 @@ def calculate_scalar_product_matrix(scalar_product_handle, base_a, base_b,
 
     else:
         i, j = np.mgrid[0:fractions_a.shape[0],
-                        0:fractions_b.shape[0]]
+                        0:fracstion_b.shape[0]]
         fractions_i = fractions_a[i]
-        fractions_j = fractions_b[j]
+        fractions_j = fracstion_b[j]
 
         res = scalar_product_handle(fractions_i.flatten(),
                                     fractions_j.flatten())
         return res.reshape(fractions_i.shape)
 
 
-def project_on_base(state, base):
+def project_on_base(function, base):
     """
-    Projects a *state* on a basis given by *base*.
+    Projects a *function* on a basis given by *base*.
 
     Args:
-        state (array_like): List of functions to approximate.
-        base (:py:class:`.Base`): Basis to project onto.
+        function (:py:class:`Function`): Function to approximate.
+        base (:py:class:`Base`): basis to project onto.
 
     Return:
         numpy.ndarray: Weight vector in the given *base*
@@ -1052,7 +1019,7 @@ def project_on_base(state, base):
 
     # compute <x(z, t), phi_i(z)> (vector)
     projections = calculate_scalar_product_matrix(dot_product_l2,
-                                                  Base(state),
+                                                  Base(function),
                                                   base).squeeze()
 
     # compute <phi_i(z), phi_j(z)> for 0 < i, j < n (matrix)
@@ -1061,26 +1028,26 @@ def project_on_base(state, base):
     return np.reshape(np.dot(np.linalg.inv(scale_mat), projections), (scale_mat.shape[0], ))
 
 
-def project_on_bases(states, canonical_equations):
+def project_on_bases(canonical_equations, initial_states):
     """
-    Convenience wrapper for :py:func:`.project_on_base`.
-    Calculate the state, assuming it will be constituted by the dominant
-    base of the respective system. The keys from the dictionaries
-    *canonical_equations* and *states* must be the same.
+    Calculate initial state, assuming it will be constituted by the dominant systems.
+    The keys from the dictionaries *canonical_equations* and *initial_states* must
+    be the same.
 
     Args:
-        states: Dictionary with a list of functions as values.
-        canonical_equations: List of :py:class:`.CanonicalEquation` instances.
+        canonical_equations (collections.OrderedDict): Ordered dictionary with
+            :py:class:`pyinduct.core.CanonicalEquation`s as values.
+        initial_states: Dictionary with functions as values.
 
     Returns:
-        numpy.array: Finit dimensional state as 1d-array corresponding to the
-            concatenated dominant bases from *canonical_equations*.
+        numpy.array: Initial state as 1d-array corresponding to the concatenated
+            dominant bases from *canonical_equations*.
     """
     q0 = np.array([])
-    for ce in canonical_equations:
+    for ce in canonical_equations.values():
         lbl = ce.dominant_lbl
-        q0 = np.hstack(tuple([q0] + [project_on_base(state, get_base(lbl))
-                                     for state in states[ce.name]]))
+        q0 = np.hstack(tuple([q0] + [project_on_base(initial_state, get_base(lbl))
+                                     for initial_state in initial_states[ce.name]]))
 
     return q0
 
@@ -1092,7 +1059,7 @@ def back_project_from_base(weights, base):
 
     Args:
         weights (numpy.ndarray): Weight vector.
-        base (:py:class:`.Base`): Base to be used for the projection.
+        base (:py:class:`Base`): Base to be used for the projection.
 
     Return:
         evaluation handle
@@ -1119,8 +1086,8 @@ def change_projection_base(src_weights, src_base, dst_base):
 
     Args:
         src_weights (numpy.ndarray): Vector of numbers.
-        src_base (:py:class:`.Base`): The source Basis.
-        dst_base (:py:class:`.Base`): The destination Basis.
+        src_base (:py:class:`Base`): The source Basis.
+        dst_base (:py:class:`Base`): The destination Basis.
 
     Return:
         :obj:`numpy.ndarray`: target weights
@@ -1155,7 +1122,7 @@ class TransformationInfo:
 
     This class serves as an easy to use structure to aggregate information,
     describing transformations between different
-    :py:class:`.BaseFraction` s. It can be tested for equality to check the
+    :py:class:`BaseFraction` s. It can be tested for equality to check the
     equity of transformations and is hashable
     which makes it usable as dictionary key to cache different transformations.
 
@@ -1211,7 +1178,7 @@ def get_weight_transformation(info):
     destination bases and evaluating their :attr:`transformation_hints`.
 
     Args:
-        info(:py:class:`.TransformationInfo`): information about the requested
+        info(py:class:`TransformationInfo`): information about the requested
             transformation.
 
     Return:
@@ -1280,55 +1247,23 @@ def get_weight_transformation(info):
     return last_handle
 
 
-def get_transformation_info(source_label, destination_label,
-                            source_order, destination_order):
-    """
-    Provide the weights transformation from one/source base to
-    another/destination base.
-
-    Args:
-        source_label (str): Label from the source base.
-        destination_label (str): Label from the destination base.
-        source_order: Order from the available time derivative
-            of the source weights.
-        destination_order: Order from the desired time derivative
-            of the destination weights.
-
-    Returns:
-        :py:class:`.TransformationInfo`: Transformation info object.
-
-    """
-    info = TransformationInfo()
-    info.src_lbl = source_label
-    info.src_base = get_base(info.src_lbl)
-    info.src_order = source_order
-    info.dst_lbl = destination_label
-    info.dst_base = get_base(info.dst_lbl)
-    info.dst_order = destination_order
-
-    return info
-
-
 def calculate_expanded_base_transformation_matrix(src_base, dst_base, src_order, dst_order, use_eye=False):
-    r"""
-    Constructs a transformation matrix :math:`\bar V` from basis given by
-    *src_base* to basis given by *dst_base* that also transforms all temporal
-    derivatives of the given weights.
+    """
+    Constructs a transformation matrix :math:`\\bar V` from basis given by *src_base* to basis given
+    by *dst_base* that also transforms all temporal derivatives of the given weights.
 
     See:
-        :py:func:`.calculate_base_transformation_matrix` for further details.
+        :py:func:`calculate_base_transformation_matrix` for further details.
 
     Args:
-        dst_base (:py:class:`.Base`): New projection base.
-        src_base (:py:class:`.Base`): Current projection base.
+        dst_base (:py:class:`Base`): New projection base.
+        src_base (:py:class:`Base`): Current projection base.
         src_order: Temporal derivative order available in *src_base*.
         dst_order: Temporal derivative order needed in *dst_base*.
-        use_eye (bool): Use identity as base transformation matrix.
-            (For easy selection of derivatives in the same base)
+        use_eye (bool): Use identity as base transformation matrix. (For easy selection of derivatives in the same base)
 
     Raises:
-        ValueError: If destination needs a higher derivative order than source
-            can provide.
+        ValueError: If destination needs a higher derivative order than source can provide.
 
     Return:
         :obj:`numpy.ndarray`: Transformation matrix
@@ -1362,15 +1297,15 @@ def calculate_base_transformation_matrix(src_base, dst_base):
     Warning:
         This method assumes that all members of the given bases have
         the same type and that their
-        :py:class:`.BaseFraction` s, define compatible scalar products.
+        :py:class:`BaseFraction` s, define compatible scalar products.
 
     Raises:
         TypeError: If given bases do not provide an
-            :py:func:`.scalar_product_hint` method.
+            :py:func:`scalar_product_hint` method.
 
     Args:
-        src_base (:py:class:`.Base`): Current projection base.
-        dst_base (:py:class:`.Base`): New projection base.
+        src_base (:py:class:`Base`): Current projection base.
+        dst_base (:py:class:`Base`): New projection base.
 
     Return:
         :py:class:`numpy.ndarray`: Transformation matrix :math:`V` .
@@ -1408,25 +1343,25 @@ def calculate_base_transformation_matrix(src_base, dst_base):
 
 
 def normalize_base(b1, b2=None):
-    r"""
-    Takes two :py:class:`.Base`'s :math:`\boldsymbol{b}_1` ,
-    :math:`\boldsymbol{b}_1` and normalizes them so that
-    :math:`\langle\boldsymbol{b}_{1i}\,
-    ,\:\boldsymbol{b}_{2i}\rangle = 1`.
-    If only one base is given, :math:`\boldsymbol{b}_2`
-    defaults to :math:`\boldsymbol{b}_1`.
+    """
+    Takes two :py:class:`Base` s :math:`\\boldsymbol{b}_1` ,
+    :math:`\\boldsymbol{b}_1` and normalizes them so that
+    :math:`\\langle\\boldsymbol{b}_{1i}\\,
+    ,\:\\boldsymbol{b}_{2i}\\rangle = 1`.
+    If only one base is given, :math:`\\boldsymbol{b}_2`
+    defaults to :math:`\\boldsymbol{b}_1`.
 
     Args:
-        b1 (:py:class:`.Base`): :math:`\boldsymbol{b}_1`
-        b2 (:py:class:`.Base`): :math:`\boldsymbol{b}_2`
+        b1 (:py:class:`Base`): :math:`\\boldsymbol{b}_1`
+        b2 (:py:class:`Base`): :math:`\\boldsymbol{b}_2`
 
     Raises:
-        ValueError: If :math:`\boldsymbol{b}_1`
-            and :math:`\boldsymbol{b}_2` are orthogonal.
+        ValueError: If :math:`\\boldsymbol{b}_1`
+            and :math:`\\boldsymbol{b}_2` are orthogonal.
 
     Return:
-        :py:class:`.Base` : if *b2* is None,
-           otherwise: Tuple of 2 :py:class:`.Base`'s.
+        :py:class:`Base` : if *b2* is None,
+           otherwise: Tuple of 2 :py:class:`Base` s.
     """
     auto_normalization = False
     if b2 is None:
@@ -1459,11 +1394,11 @@ def normalize_base(b1, b2=None):
 def generic_scalar_product(b1, b2=None):
     """
     Calculates the pairwise scalar product between the elements
-    of the :py:class:`.Base` *b1* and *b2*.
+    of the :py:class:`Base` *b1* and *b2*.
 
     Args:
-        b1 (:py:class:`.Base`): first basis
-        b2 (:py:class:`.Base`): second basis, if omitted
+        b1 (:py:class:`Base`): first basis
+        b2 (:py:class:`Base`): second basis, if omitted
             defaults to *b1*
 
     Note:
@@ -1493,8 +1428,8 @@ def find_roots(function, grid, n_roots=None, rtol=1.e-5, atol=1.e-8,
     Searches *n_roots* roots of the *function* :math:`f(\boldsymbol{x})`
     on the given *grid* and checks them for uniqueness with aid of *rtol*.
 
-    In Detail :py:func:`scipy.optimize.root` is used to find initial candidates
-    for roots of :math:`f(\boldsymbol{x})` . If a root satisfies the criteria
+    In Detail :py:func:`fsolve` is used to find initial candidates for
+    roots of :math:`f(\boldsymbol{x})` . If a root satisfies the criteria
     given by atol and rtol it is added. If it is already in the list,
     a comprehension between the already present entries' error and the
     current error is performed. If the newly calculated root comes
@@ -1676,8 +1611,8 @@ class Domain(object):
         if points is not None:
             # points are given, easy one
             self._values = np.atleast_1d(points)
-            self._limits = (self._values.min(), self._values.max())
-            self._num = self._values.size
+            self._limits = (points.min(), points.max())
+            self._num = points.size
             # TODO check for evenly spaced entries
             # for now just use provided information
             self._step = step
@@ -1758,6 +1693,7 @@ class EvalData:
     Convenience wrapper for function evaluation.
     Contains the input data that was used for evaluation and the results.
     """
+
     def __init__(self, input_data, output_data, name=""):
         # check type and dimensions
         assert isinstance(input_data, list)
@@ -1776,387 +1712,3 @@ class EvalData:
         self.min = output_data.min()
         self.max = output_data.max()
         self.name = name
-
-    def checkInputAxisInterpolateOutput(self, other):
-        """
-        Method checks the discretization and length of self and other input_data axes, and equalize to the minimal
-        discretized axis
-
-        Args:
-            other (:py:class:`EvalData`): other EvalData class
-
-        Returns:
-            list: minimal discretized input_data axis
-            numpy.ndarray: interpolated self output_data array
-            numpy.ndarray: interpolated other output_data array
-        """
-        input_data = []
-
-        for idx in range(len(self.input_data)):
-            # check if axis have the same length
-            if self.input_data[idx].bounds[0] != other.input_data[idx].bounds[0]:
-                raise ValueError("lower boundaries doesn't match")
-            if self.input_data[idx].bounds[-1] != other.input_data[idx].bounds[-1]:
-                raise ValueError("upper boundaries doesn't match")
-            # check witch axis has the smallest discretisation
-            if len(self.input_data[idx]) <= len(other.input_data[idx]):
-                input_data.append(self.input_data[idx])
-            else:
-                input_data.append(other.input_data[idx])
-
-        # interpolate data
-        selfInterpolate = self(input_data)
-        otherInterpolate = other(input_data)
-
-        return input_data, selfInterpolate.output_data, otherInterpolate.output_data
-
-    def add(self, other, fromLeft=True):
-        """
-        Calculates the element wise addition of the output_data arrays of self and other. Method is used to
-        overload + (__add__ (fromLeft=True) or __radd__ (fromLeft=False)) operator. If other is a :py:class:`EvalData`,
-        the input_data lists of self and other are compared and the axes with the least discretization are used. The
-        output_data is interpolated to the used axes. The mathematical operation is performed on the interpolated
-        output_data. If other is a :class:`numbers.Number`, the self.output_data array is element wise added with
-        other.
-
-
-        Args:
-            other (:class:`numbers.Number` or :py:class:`EvalData`): to add number or EvalData object
-            fromLeft boolean: addition from left if True or from right if False
-
-        Returns:
-            :py:class:`EvalData` with adapted input_data and output_data as result of addition
-        """
-        if isinstance(other, numbers.Number):
-            if fromLeft:
-                output_data = self.output_data + other
-            else:
-                output_data = other + self.output_data
-            return EvalData(input_data=self.input_data,
-                            output_data=output_data,
-                            name=self.name)
-        elif isinstance(other, EvalData):
-            assert len(self.input_data) == len(other.input_data)
-
-            input_data, self_output_data, other_output_data = self.checkInputAxisInterpolateOutput(other)
-
-            # addition der output array
-            if fromLeft:
-                output_data = self_output_data + other_output_data
-                _name = self.name + " + " + other.name
-            else:
-                output_data = other_output_data + self_output_data
-                _name = other.name + " + " + self.name
-
-            return EvalData(input_data=input_data,
-                            output_data=output_data,
-                            name=_name)
-        else:
-            raise NotImplemented
-
-    def __radd__(self, other):
-        return self.add(other, fromLeft=False)
-
-    def __add__(self, other):
-        return self.add(other)
-
-    def sub(self, other, fromLeft=True):
-        """
-        Calculates the element wise subtraction of the output_data arrays of self and other. Method is used to
-        overload - (__sub__ (fromLeft=True) or __rsub__ (fromLeft=False)) operator. If other is a :py:class:`EvalData`,
-        the input_data lists of self and other are compared and the axes with the least discretization are used. The
-        output_data is interpolated to the used axes. The mathematical operation is performed on the interpolated
-        output_data. If other is a :class:`numbers.Number`, the self.output_data array is element wise subtracted with
-        other.
-
-        Args:
-            other :class:`numbers.Number` or :py:class:`EvalData`: to sub number or EvalData object
-            fromLeft boolean: subtraction from left if True or from right if False
-
-        Returns:
-            :py:class:`EvalData` with adapted input_data and output_data as result of subtraction
-        """
-        if isinstance(other, numbers.Number):
-            if fromLeft:
-                output_data = self.output_data - other
-            else:
-                output_data = other - self.output_data
-            return EvalData(input_data=self.input_data,
-                            output_data=output_data,
-                            name=self.name)
-        elif isinstance(other, EvalData):
-            assert len(self.input_data) == len(other.input_data)
-
-            input_data, self_output_data, other_output_data = self.checkInputAxisInterpolateOutput(other)
-
-            # addition der output array
-            if fromLeft:
-                output_data = self_output_data - other_output_data
-                _name = self.name + " - " + other.name
-            else:
-                output_data = other_output_data - self_output_data
-                _name = other.name + " - " + self.name
-
-            return EvalData(input_data=input_data,
-                            output_data=output_data,
-                            name=_name)
-        else:
-            raise NotImplemented
-
-    def __rsub__(self, other):
-        return self.sub(other, fromLeft=False)
-
-    def __sub__(self, other):
-        return self.sub(other)
-
-    def mul(self, other, fromLeft=True):
-        """
-        Calculates the element wise multiplication of the output_data arrays of self and other. Method is used to
-        overload * (__mul__ (fromLeft=True) or __rmul__ (fromLeft=False)) operator. If other is a :py:class:`EvalData`,
-        the input_data lists of self and other are compared and the axes with the least discretization are used. The
-        output_data is interpolated to the used axes. The mathematical operation is performed on the interpolated
-        output_data. If other is a :class:`numbers.Number`, the self.output_data array is element wise multiplied with
-        other.
-
-        Args:
-            other :class:`numbers.Number` or :py:class:`EvalData`: to mul number or EvalData object
-            fromLeft boolean: multiplication from left if True or from right if False
-
-        Returns:
-            :py:class:`EvalData` with adapted input_data and output_data as result of multiplication
-        """
-        if isinstance(other, numbers.Number):
-            output_data = self.output_data * other
-            return EvalData(input_data=self.input_data,
-                            output_data=output_data,
-                            name=self.name)
-        elif isinstance(other, EvalData):
-            assert len(self.input_data) == len(other.input_data)
-
-            input_data, self_output_data, other_output_data = self.checkInputAxisInterpolateOutput(other)
-
-            # addition der output array
-            output_data = other_output_data * self_output_data
-            if fromLeft:
-                _name = self.name + " * " + other.name
-            else:
-                _name = other.name + " * " + self.name
-
-            return EvalData(input_data=input_data,
-                            output_data=output_data,
-                            name=_name)
-        else:
-            raise NotImplemented
-
-    def __rmul__(self, other):
-        return self.mul(other, fromLeft=False)
-
-    def __mul__(self, other):
-        return self.mul(other)
-
-    def matmul(self, other, fromLeft=True):
-        """
-        Calculates the matrix multiplication of the output_data arrays of self and other. Method is used to overload
-        @ (__matmul__ (fromLeft=True) or __rmatmul__ (fromLeft=False)) operator. The input_data lists of self and other
-        are compared and the axes with the least discretization are used. The output_data is interpolated to the used
-        axes. The mathematical operation is performed on the interpolated output_data.
-
-        Args:
-            other :py:class:`EvalData`: to matrix mul EvalData object
-            fromLeft boolean: matrix multiplication from left if True or from right if False
-
-        Returns:
-            :py:class:`EvalData` with adapted input_data and output_data as result of matrix multiplication
-        """
-        if isinstance(other, EvalData):
-            assert len(self.input_data) == len(other.input_data)
-            if self.output_data.shape != other.output_data.shape:
-                raise NotImplemented('Different sizes')
-
-            input_data, self_output_data, other_output_data = self.checkInputAxisInterpolateOutput(other)
-
-            if fromLeft:
-                output_data = self_output_data @ other_output_data
-                _name = self.name + " @ " + other.name
-            else:
-                output_data = other_output_data @ self_output_data
-                _name = other.name + " @ " + self.name
-
-            return EvalData(input_data=input_data,
-                            output_data=output_data,
-                            name=_name)
-        else:
-            raise NotImplemented
-
-    def __rmatmul__(self, other):
-        return self.matmul(other, fromLeft=False)
-
-    def __matmul__(self, other):
-        return self.matmul(other)
-
-    def __pow__(self, power):
-        """
-        Calculates the power element by element of output_data array
-
-        Args:
-            power (:class:`numbers.Number`): power
-
-        Returns:
-            :py:class:`EvalData` with self.input_data and output_data as result of power
-        """
-        if isinstance(power, numbers.Number):
-            output_data = self.output_data ** power
-            return EvalData(input_data=self.input_data,
-                            output_data=output_data)
-        else:
-            raise NotImplemented
-
-    def __call__(self, pos):
-        """
-        Interpolation method for output_data. Determines, if a one, two or three dimensional interpolation is used.
-        Method can handle slice objects in the pos lists. One slice object is allowed per axis list.
-        Example:
-            without slices:
-
-                axis1 = Domain((0, 0.5), 5)
-                axis2 = Domain((0, 1), 11)
-                data = np.random.rand(5, 11)
-                ed = EvalData(input_data=[axis1, axis2], output_data=data)
-                pos = [[0.1], [0.5, 0.7]]
-                values = ed(pos)        # values.output_data.size = 1 x 2
-
-            with slices:
-
-                axis1 = Domain((0, 0.5), 5)
-                axis2 = Domain((0, 1), 11)
-                data = np.random.rand(5, 11)
-                ed = EvalData(input_data=[axis1, axis2], output_data=data)
-                pos = [[slice(None)], [0.5, 0.7]]
-                values = ed(pos)        # values.output_data.size = 5 x 2
-
-            or:
-
-                pos = [[slice(0, 2)], [0.5, 0.7]]
-                values = ed(pos)        # values.output_data.size = 2 x 2
-
-        Args:
-            pos (list(list)): axis positions in the form
-
-            - 1D: [axis] with axis=[1,2,3]
-            - 2D: [axis1, axis2] with axis1=[1,2,3] and axis2=[0,1,2,3,4]
-
-        Returns:
-            :py:class:`EvalData` with pos as input_data and to pos interpolated output_data
-        """
-        assert isinstance(pos, list)
-        assert len(pos) == len(self.input_data)
-
-        _list = []
-        for i in range(len(pos)):
-            assert isinstance(pos, list)
-            _entry = []
-            for j in range(len(pos[i])):
-                if isinstance(pos[i][j], slice):
-                    _entry = self.input_data[i][pos[i][j]].tolist()
-                    if _entry is None:
-                        raise ValueError('Slice returns None!')
-                    break
-                else:
-                    _entry.append(pos[i][j])
-
-            _list.append(_entry)
-
-        return self.interpolate(_list)
-
-    def interpolate(self, pos):
-        """
-        Main interpolation method for output_data. Determines, if a one, two or three dimensional interpolation is used.
-
-        Args:
-            pos (list(list)): axis positions in the form
-
-            - 1D: [axis] with axis=[1,2,3]
-            - 2D: [axis1, axis2] with axis1=[1,2,3] and axis2=[0,1,2,3,4]
-
-        Returns:
-            :py:class:`EvalData` with pos as input_data and to pos interpolated output_data
-        """
-        assert isinstance(pos, list)
-        assert len(pos) == len(self.input_data)
-
-        # check interpolation space
-        if self.output_data.ndim == 1:
-            values = self._interpolate1d(pos)
-            input_data = Domain(points=pos[0])
-            return EvalData(input_data=[input_data],
-                            output_data=np.array(values),
-                            name=self.name)
-        elif self.output_data.ndim == 2:
-            values = self._interpolate2d(pos)
-            pos0 = Domain(points=pos[0])
-            pos1 = Domain(points=pos[1])
-            input_data = [pos0, pos1]
-            return EvalData(input_data=input_data,
-                            output_data=np.array(values),
-                            name=self.name)
-        elif self.output_data.ndim == 3:
-            raise NotImplemented
-
-    def _interpolate1d(self, pos):
-        """
-        Interpolates the one dimensional output_data to the given axis positions
-
-        Args:
-            pos (list(list)): axis positions in the form [axis] with axis=[1,2,3]
-
-        Returns:
-            numpy.ndarray: Interpolated values.
-        """
-        # TODO check boundaries
-        return np.interp(pos[0], self.input_data[0], self.output_data)
-
-    def _interpolate2d(self, pos):
-        """
-        Interpolates the two dimensional output_data to the given axis positions
-
-        Args:
-            pos (list(list)): two axis positions in the form [axis1, axis2] with axis1=[1,2,3] and axis2=[0,1,2,3,4]
-
-        Returns:
-            numpy.ndarray: Interpolated values.
-        """
-        # TODO check boundaries
-        f = interp2d(self.input_data[1], self.input_data[0], self.output_data)
-        values = f(pos[1], pos[0])
-        if values.ndim == 2:
-            return values
-        else:
-            return np.array([values])
-
-    def sqrt(self):
-        """
-        Calculates the element wise root of output_data array
-
-        Return:
-             :py:class:`EvalData` with self.input_data and output_data as result of root calculation
-        """
-        output_data = np.sqrt(self.output_data)
-
-        ed = EvalData(input_data=self.input_data,
-                      output_data=output_data,
-                      name=self.name)
-        return ed
-
-    def abs(self):
-        """
-        Calculates the element wise absolute value of output_data array
-
-        Return:
-            :py:class:`EvalData` with self.input_data and output_data as result of absolute value calculation
-        """
-        output_data = np.abs(self.output_data)
-
-        ed = EvalData(input_data=self.input_data,
-                      output_data=output_data,
-                      name=self.name)
-        return ed
