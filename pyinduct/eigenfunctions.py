@@ -25,6 +25,7 @@ from .visualization import visualize_roots
 
 __all__ = ["SecondOrderOperator", "SecondOrderEigenVector", "SecondOrderEigenfunction",
            "SecondOrderDirichletEigenfunction", "SecondOrderRobinEigenfunction",
+           "SecondOrderRobDiriEigenfunction", "SecondOrderDiriRobEigenfunction",
            "TransformedSecondOrderEigenfunction", "AddMulFunction",
            "LambdifiedSympyExpression", "FiniteTransformFunction"]
 
@@ -561,7 +562,8 @@ class LambdifiedSympyExpression(Function):
                        for sp_func in sympy_funcs]
         funcs = [self._func_factory(der_ord)
                  for der_ord in range(len(sympy_funcs))]
-        super().__init__(funcs[0],
+        Function.__init__(self, funcs[0],
+                         domain=spatial_domain,
                          nonzero=spatial_domain,
                          derivative_handles=funcs[1:])
 
@@ -905,7 +907,7 @@ class SecondOrderRobinEigenfunction(Function, SecondOrderEigenfunction):
 
         funcs = [self._eig_func_factory(der_ord)
                  for der_ord in range(max_der_order + 1)]
-        Function.__init__(self, funcs[0], domain=(0, l),
+        Function.__init__(self, funcs[0], domain=(0, l), nonzero=(0, l),
                           derivative_handles=funcs[1:])
 
     def _eig_func_factory(self, der_order):
@@ -1046,6 +1048,323 @@ class SecondOrderRobinEigenfunction(Function, SecondOrderEigenfunction):
         eig_values = a0 - a2 * eig_frequencies ** 2 - a1 ** 2 / 4. / a2
 
         return eig_frequencies, eig_values
+
+class SecondOrderRobDiriEigenfunction(SecondOrderRobinEigenfunction):
+    """
+    This class provides an eigenfunction :math:`\\varphi(z)` to the eigenvalue problem given by
+
+    .. math::
+        a_2\\varphi''(z) + a_1&\\varphi'(z) + a_0\\varphi(z) = \\lambda\\varphi(z) \\\\
+        \\varphi'(0) &= \\alpha \\varphi(0) \\\\
+        \\varphi(l) &= 0.
+
+    The eigenfrequency
+
+    .. math:: \\omega = \\sqrt{-\\frac{a_1^2}{4a_2^2}+\\frac{a_0-\\lambda}{a_2}}
+
+    must be provided (for example with the :py:func:`eigfreq_eigval_hint` of this class).
+
+    Args:
+        om (numbers.Number): eigenfrequency :math:`\\omega`
+        param (array_like): :math:`\\Big( a_2, a_1, a_0, \\alpha, None \\Big)^T`
+        l (numbers.Number): End of the domain :math:`z\\in [0,l]`.
+        scale (numbers.Number): Factor to scale the eigenfunctions (corresponds to :math:`\\varphi(0)=\\text{phi\\_0}`).
+        max_der_order (int): Number of derivative handles that are needed.
+    """
+
+    def __init__(self, om, param, l, scale=1, max_der_order=2):
+        SecondOrderRobinEigenfunction.__init__(self, om, param, l, scale,
+                                               max_der_order)
+
+    @staticmethod
+    def eigfreq_eigval_hint(param, l, n_roots, show_plot=False):
+        r"""
+        Return the first *n_roots* eigenfrequencies :math:`\omega` and eigenvalues :math:`\lambda`.
+
+        .. math:: \omega_i = \sqrt{
+            - \frac{a_1^2}{4a_2^2}
+            + \frac{a_0 - \lambda_i}{a_2}}
+            \quad i = 1, \dotsc, \text{n\_roots}
+
+        to the considered eigenvalue problem.
+
+        Args:
+            param (array_like): :math:`\big( a_2, a_1, a_0, \alpha, \beta \big)^T`
+            l (numbers.Number): Right boundary value of the domain :math:`[0,l]\ni z`.
+            n_roots (int): Amount of eigenfrequencies to compute.
+            show_plot (bool): Show a plot window of the characteristic equation.
+
+        Return:
+            tuple --> booth tuple elements are numpy.ndarrays of length *nroots*:
+            .. math:: \Big(\big[\omega_1, \dotsc, \omega_{\text{n\_roots}}\Big],
+                \Big[\lambda_1, \dotsc, \lambda_{\text{n\_roots}}\big]\Big)
+        """
+
+        a2, a1, a0, alpha, _ = param
+        eta = -a1 / 2. / a2
+
+        # characteristic equations for eigen vectors:
+        # phi = e^(eta z) (c1 cos(om z) + c2 sin(om z))
+        def characteristic_equation(omega):
+            if np.isclose(omega, 0):
+                return 1 + (alpha - eta) * l
+            else:
+                return (np.cos(omega * l)
+                        + (alpha - eta) / omega * np.sin(omega * l))
+
+        if show_plot:
+            z_real = np.linspace(-15, 15)
+            z_imag = np.linspace(-5, 5)
+            vec_function = np.vectorize(characteristic_equation)
+            plt.plot(z_real, np.real(vec_function(z_real)))
+            plt.plot(z_real, np.imag(vec_function(z_real)))
+            plt.plot(z_imag, np.real(vec_function(z_imag * 1j)))
+            plt.plot(z_imag, np.imag(vec_function(z_imag * 1j)))
+            plt.show()
+
+        # assume 1 root per pi/l (safety factor = 3)
+        search_begin = np.pi / l * .1
+        search_end = 3 * n_roots * np.pi / l
+        start_values_real = np.linspace(search_begin,
+                                        search_end,
+                                        search_end / np.pi * l * 100)
+        start_values_imag = np.linspace(search_begin,
+                                        search_end,
+                                        search_end / np.pi * l * 20)
+
+        # search imaginary roots
+        try:
+            om = list(find_roots(characteristic_equation,
+                                 [np.array([0]), start_values_imag],
+                                 rtol=1e-3*l, cmplx=True))
+        except ValueError:
+            om = list()
+
+        # search real roots
+        om += find_roots(characteristic_equation, [start_values_real],
+                         2 * n_roots, rtol=1e-3*l,
+                         cmplx=False).tolist()
+
+        # only "real" roots and complex roots with imaginary part != 0
+        # and real part == 0 considered
+        if any([not np.isclose(root.real, 0)
+                and not np.isclose(root.imag, 0) for root in om]):
+            raise NotImplementedError("This case is currently not considered.")
+
+        # read out complex roots
+        _complex_roots = [root for root in om if np.isclose(root.real, 0)
+                          and not np.isclose(root.imag, 0)]
+        complex_roots = list()
+        for complex_root in _complex_roots:
+            if not any([np.isclose(np.abs(complex_root), _complex_root)
+                        for _complex_root in complex_roots]):
+                complex_roots.append(complex_root)
+
+        # sort out all complex roots and roots with negative real part
+        om = [root.real + 0j for root in om
+              if root.real >= 0 and np.isclose(root.imag, 0)]
+
+        # delete all around om = 0
+        for i in [ind for ind, val in enumerate(np.isclose(np.array(om),
+                                                           0,
+                                                           atol=1e-4)) if val]:
+            om.pop(i)
+
+        # if om = 0 is a root then add 0 to the list
+        if np.isclose(np.abs(characteristic_equation(0)), 0):
+            om.insert(0, 0)
+
+        # add complex root
+        for complex_root in complex_roots:
+            om.insert(0, complex_root)
+
+        if len(om) < n_roots:
+            raise ValueError("RadRobinEigenvalues.compute_eigen_frequencies()"
+                             "can not find enough roots")
+
+        eig_frequencies = np.array(om[:n_roots])
+        eig_values = a0 - a2 * eig_frequencies ** 2 - a1 ** 2 / 4. / a2
+
+        return eig_frequencies, eig_values
+
+
+class SecondOrderDiriRobEigenfunction(LambdifiedSympyExpression, SecondOrderRobDiriEigenfunction):
+    """
+    This class provides an eigenfunction :math:`\\varphi(z)` to the eigenvalue problem given by
+
+    .. math::
+        a_2\\varphi''(z) + a_1&\\varphi'(z) + a_0\\varphi(z) = \\lambda\\varphi(z) \\\\
+        \\varphi(0) &=  0 \\\\
+        \\varphi'(l) &= -\\beta \\varphi(0).
+
+    The eigenfrequency
+
+    .. math:: \\omega = \\sqrt{-\\frac{a_1^2}{4a_2^2}+\\frac{a_0-\\lambda}{a_2}}
+
+    must be provided (for example with the :py:func:`eigfreq_eigval_hint` of this class).
+
+    Args:
+        om (numbers.Number): eigenfrequency :math:`\\omega`
+        param (array_like): :math:`\\Big( a_2, a_1, a_0, None, \\beta \\Big)^T`
+        l (numbers.Number): End of the domain :math:`z\\in [0,l]`.
+        scale (numbers.Number): Factor to scale the eigenfunctions (corresponds to :math:`\\varphi(0)=\\text{phi\\_0}`).
+        max_der_order (int): Number of derivative handles that are needed.
+    """
+
+    def __init__(self, om, param, l, scale=1, max_der_order=2):
+        self._om = om
+        self._param = param
+        self._norm_fac = scale
+        self._max_der_order = max_der_order
+
+        a2_, a1_, a0_, _, beta_ = self._param
+        eta_ = -a1_ / 2. / a2_
+
+        eta, omega, beta, scale_, z = sp.symbols("eta omega beta scale_ z")
+        subs_list = [(scale_, scale), (eta, eta_), (omega, om), ]
+        sp_funcs = [(scale / omega * sp.exp(eta * z) * sp.sin(omega * z)).subs(subs_list)]
+        for _ in np.arange(max_der_order):
+            sp_funcs.append(sp_funcs[-1].diff(z))
+
+        LambdifiedSympyExpression.__init__(self, sp_funcs, z, (0, l))
+
+    # @staticmethod
+    # def eigfreq_eigval_hint(param, l, n_roots, show_plot=False):
+    #     a2, a1, a0, _, beta = param
+    #     _param = a2, -a1, a0, beta, None
+    #     return SecondOrderRobDiriEigenfunction.eigfreq_eigval_hint(
+    #         _param, l, n_roots, show_plot=show_plot)
+
+    @staticmethod
+    def eigfreq_eigval_hint(param, l, n_roots, show_plot=False):
+        r"""
+        Return the first *n_roots* eigenfrequencies :math:`\omega` and eigenvalues :math:`\lambda`.
+
+        .. math:: \omega_i = \sqrt{
+            - \frac{a_1^2}{4a_2^2}
+            + \frac{a_0 - \lambda_i}{a_2}}
+            \quad i = 1, \dotsc, \text{n\_roots}
+
+        to the considered eigenvalue problem.
+
+        Args:
+            param (array_like): :math:`\big( a_2, a_1, a_0, \alpha, \beta \big)^T`
+            l (numbers.Number): Right boundary value of the domain :math:`[0,l]\ni z`.
+            n_roots (int): Amount of eigenfrequencies to compute.
+            show_plot (bool): Show a plot window of the characteristic equation.
+
+        Return:
+            tuple --> booth tuple elements are numpy.ndarrays of length *nroots*:
+            .. math:: \Big(\big[\omega_1, \dotsc, \omega_{\text{n\_roots}}\Big],
+                \Big[\lambda_1, \dotsc, \lambda_{\text{n\_roots}}\big]\Big)
+        """
+
+        a2, a1, a0, _, beta = param
+        eta = -a1 / 2. / a2
+
+        def characteristic_equation(omega):
+            try:
+                return omega * np.cos(omega * l) + (eta + beta) * np.sin(omega * l)
+            except FloatingPointError:
+                return 0
+
+        if show_plot:
+            z_real = np.linspace(-15, 15)
+            z_imag = np.linspace(-5, 5)
+            vec_function = np.vectorize(characteristic_equation)
+            plt.plot(z_real, np.real(vec_function(z_real)))
+            plt.plot(z_real, np.imag(vec_function(z_real)))
+            plt.plot(z_imag, np.real(vec_function(z_imag * 1j)))
+            plt.plot(z_imag, np.imag(vec_function(z_imag * 1j)))
+            plt.show()
+
+        # assume 1 root per pi/l (safety factor = 3)
+        search_begin = np.pi / l * .1
+        search_end = 3 * n_roots * np.pi / l
+        start_values_real = np.linspace(search_begin,
+                                        search_end,
+                                        search_end / np.pi * l * 100)
+        start_values_imag = np.linspace(search_begin,
+                                        search_end,
+                                        search_end / np.pi * l * 20)
+
+        # search imaginary roots
+        try:
+            om = list(find_roots(characteristic_equation,
+                                 [np.array([0]), start_values_imag],
+                                 rtol=1e-3*l, cmplx=True))
+        except ValueError:
+            om = list()
+
+        # search real roots
+        om += find_roots(characteristic_equation, [start_values_real],
+                         2 * n_roots, rtol=1e-3*l,
+                         cmplx=False).tolist()
+
+        # only "real" roots and complex roots with imaginary part != 0
+        # and real part == 0 considered
+        if any([not np.isclose(root.real, 0)
+                and not np.isclose(root.imag, 0) for root in om]):
+            raise NotImplementedError("This case is currently not considered.")
+
+        # read out complex roots
+        _complex_roots = [root for root in om if np.isclose(root.real, 0)
+                          and not np.isclose(root.imag, 0)]
+        complex_roots = list()
+        for complex_root in _complex_roots:
+            if not any([np.isclose(np.abs(complex_root), _complex_root)
+                        for _complex_root in complex_roots]):
+                complex_roots.append(complex_root)
+
+        # sort out all complex roots and roots with negative real part
+        om = [root.real + 0j for root in om
+              if root.real >= 0 and np.isclose(root.imag, 0)]
+
+        # delete all around om = 0
+        for i in [ind for ind, val in enumerate(np.isclose(np.array(om),
+                                                           0,
+                                                           atol=1e-4)) if val]:
+            om.pop(i)
+
+        # add complex root
+        for complex_root in complex_roots:
+            om.insert(0, complex_root)
+
+        if len(om) < n_roots:
+            raise ValueError("RadRobinEigenvalues.compute_eigen_frequencies()"
+                             "can not find enough roots")
+
+        eig_frequencies = np.array(om[:n_roots])
+        eig_values = a0 - a2 * eig_frequencies ** 2 - a1 ** 2 / 4. / a2
+
+        return eig_frequencies, eig_values
+
+
+class ReversedDiriRobEigenfunction(SecondOrderDiriRobEigenfunction):
+    def __init__(self, om, param, l, scale=1, max_der_order=2):
+        a2, a1, a0, alpha, _ = param
+        _param = a2, -a1, a0, None, alpha
+        SecondOrderDiriRobEigenfunction.__init__(self, om, _param, l, scale,
+                                                 max_der_order)
+
+        self.function_handle = self.function_handle_factory(
+            self.function_handle, l)
+        self.derivative_handles = [
+            self.function_handle_factory(handle, l, ord + 1) for
+            ord, handle in enumerate(self.derivative_handles)]
+
+    def function_handle_factory(self, old_handle, l, der_order=0):
+        def new_handle(z):
+            return old_handle(l - z) * (-1) ** der_order
+
+        return new_handle
+
+    @staticmethod
+    def eigfreq_eigval_hint(param, l, n_roots, show_plot=False):
+        a2, a1, a0, alpha, _ = param
+        _param = a2, -a1, a0, None, alpha
+        return SecondOrderDiriRobEigenfunction.eigfreq_eigval_hint(
+            _param, l, n_roots, show_plot=show_plot)
 
 
 class TransformedSecondOrderEigenfunction(Function):
