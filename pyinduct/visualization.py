@@ -554,7 +554,7 @@ class PgSurfacePlot(PgDataPlot):
         event loop. Therefore remember to store a reference to this object.
     """
 
-    def __init__(self, data, scales=None, animation_axis=0, title="", zlabel='x(z,t)'):
+    def __init__(self, data, scales=None, animation_axis=None, title="", zlabel='x(z,t)'):
         """
 
         :type data: object
@@ -615,21 +615,17 @@ class PgSurfacePlot(PgDataPlot):
         extrema = [np.min(extrema_arr[..., 0], axis=0),
                    np.max(extrema_arr[..., 1], axis=0)]
 
-        extrema = np.hstack((
+        self.extrema = np.hstack((
             extrema,
             ([min([data_set.min for data_set in self._data])],
              [max([data_set.max for data_set in self._data])])))
 
-        deltas = np.diff(extrema, axis=0).squeeze()
-
-        # print("minima: {}".format(extrema[0]))
-        # print("maxima: {}".format(extrema[1]))
-        # print("deltas: {}".format(deltas))
+        self.deltas = np.diff(self.extrema, axis=0).squeeze()
 
         if scales is None:
             # scale all axes uniformly if no scales are given
             _scales = []
-            for value in deltas:
+            for value in self.deltas:
                 if np.isclose(value, 0):
                     _scales.append(1)
                 else:
@@ -638,63 +634,64 @@ class PgSurfacePlot(PgDataPlot):
         else:
             self.scales = scales
 
-        # print(self.scales)
-        sc_deltas = deltas * self.scales
+        # setup color map
+        norm = mpl.colors.Normalize(vmin=self.extrema[0, -1],
+                                    vmax=self.extrema[1, -1])
+        self.mapping = cm.ScalarMappable(norm, self.cmap)
 
+        # add plots
         self.plot_items = []
         for idx, data_set in enumerate(self._data):
             if len(data_set.input_data) == 3:
-                raise NotImplementedError
+                if animation_axis is None:
+                    raise ValueError("animation_axis has to be provided.")
 
-                # 2d system over time -> animate
-                # assume that for 4d data, the first axis is the time
-                self.scales = np.delete(self.scales, animation_axis)
-                self.index_offset = 1
+                # crop scale arrays
+                if len(self.scales) != len(data_set.input_data):
+                    # only remove time scaling if user provided one
+                    self.scales = np.delete(self.scales, animation_axis)
 
-                norm = mpl.colors.Normalize(vmin=extrema[0, -1], vmax=extrema[1, -1])
-                m = cm.ScalarMappable(norm=norm, cmap=self.cmap)
-                colors = m.to_rgba(self._data[idx].output_data)
+                self.deltas = np.delete(self.deltas, animation_axis)
+                self.extrema = np.delete(self.extrema, animation_axis, axis=1)
 
-                plot_item = gl.GLSurfacePlotItem(
-                    x=self.scales[1] * np.atleast_1d(data_set.input_data[1]),
-                    y=self.scales[2] * np.flipud(
-                        np.atleast_1d(data_set.input_data[2])),
-                    z=self.scales[3] * data_set.output_data[0],
-                    colors=colors,
-                    computeNormals=False)
+                # move animation axis to the end
+                self._data[idx].input_data.append(self._data[idx].input_data.pop(animation_axis))
+                self._data[idx].output_data = np.moveaxis(self._data[idx].output_data,
+                                                          animation_axis,
+                                                          -1)
+                plot_item = gl.GLSurfacePlotItem(self.scales[0] * np.atleast_1d(self._data[idx].input_data[0]),
+                                                 y=self.scales[1] * np.flipud(np.atleast_1d(
+                                                     self._data[idx].input_data[1])),
+                                                 z=self.scales[2] * self._data[idx].output_data[..., 0],
+                                                 colors=self.mapping.to_rgba(self._data[idx].output_data[..., 0]),
+                                                 computeNormals=False)
             else:
                 # 1d system over time -> static
-                self.index_offset = 0
-
-                norm = mpl.colors.Normalize(vmin=extrema[0, -1], vmax=extrema[1, -1])
-                m = cm.ScalarMappable(norm=norm, cmap=self.cmap)
-                colors = m.to_rgba(self._data[idx].output_data)
-
-                plot_item = gl.GLSurfacePlotItem(
-                    x=self.scales[0] * np.atleast_1d(
-                        self._data[idx].input_data[0]),
-                    y=self.scales[1] * np.flipud(np.atleast_1d(
-                        self._data[idx].input_data[1])),
-                    z=self.scales[2] * self._data[idx].output_data,
-                    colors=colors,
-                    computeNormals=False)
+                plot_item = gl.GLSurfacePlotItem(x=self.scales[0] * np.atleast_1d(self._data[idx].input_data[0]),
+                                                 y=self.scales[1] * np.flipud(np.atleast_1d(
+                                                     self._data[idx].input_data[1])),
+                                                 z=self.scales[2] * self._data[idx].output_data,
+                                                 colors=self.mapping.to_rgba(self._data[idx].output_data),
+                                                 computeNormals=False)
 
             self.gl_widget.addItem(plot_item)
             self.plot_items.append(plot_item)
 
-        if self.index_offset == 1:
+        if animation_axis is not None:
             self.t_idx = 0
             self._timer = pg.QtCore.QTimer(self)
             self._timer.timeout.connect(self._update_plot)
             self._timer.start(100)
 
+        # setup grids
+        sc_deltas = self.deltas * self.scales
         self._xygrid = gl.GLGridItem(size=pg.QtGui.QVector3D(1, 1, 1))
         self._xygrid.setSpacing(sc_deltas[0] / 10, sc_deltas[1] / 10, 0)
         self._xygrid.setSize(1.2 * sc_deltas[0], 1.2 * sc_deltas[1], 1)
         self._xygrid.translate(
-            .5 * (extrema[1][0] + extrema[0][0]) * self.scales[0],
-            .5 * (extrema[1][1] + extrema[0][1]) * self.scales[1],
-            extrema[0][2] * self.scales[2] - 0.1 * sc_deltas[0]
+            .5 * (self.extrema[1][0] + self.extrema[0][0]) * self.scales[0],
+            .5 * (self.extrema[1][1] + self.extrema[0][1]) * self.scales[1],
+            self.extrema[0][2] * self.scales[2] - 0.1 * sc_deltas[0]
         )
         self.gl_widget.addItem(self._xygrid)
 
@@ -703,9 +700,9 @@ class PgSurfacePlot(PgDataPlot):
         self._xzgrid.setSize(1.2 * sc_deltas[0], 1.2 * sc_deltas[2], 1)
         self._xzgrid.rotate(90, 1, 0, 0)
         self._xzgrid.translate(
-            .5 * (extrema[1][0] + extrema[0][0]) * self.scales[0],
-            extrema[0][1] * self.scales[1] + 1.1 * sc_deltas[0],
-            .5 * (extrema[1][2] + extrema[0][2]) * self.scales[2]
+            .5 * (self.extrema[1][0] + self.extrema[0][0]) * self.scales[0],
+            self.extrema[0][1] * self.scales[1] + 1.1 * sc_deltas[0],
+            .5 * (self.extrema[1][2] + self.extrema[0][2]) * self.scales[2]
         )
         self.gl_widget.addItem(self._xzgrid)
 
@@ -715,32 +712,32 @@ class PgSurfacePlot(PgDataPlot):
         self._yzgrid.rotate(90, 1, 0, 0)
         self._yzgrid.rotate(90, 0, 0, 1)
         self._yzgrid.translate(
-            extrema[0][0] * self.scales[0] + 1.1 * sc_deltas[0],
-            .5 * (extrema[1][1] + extrema[0][1]) * self.scales[1],
-            .5 * (extrema[1][2] + extrema[0][2]) * self.scales[2]
+            self.extrema[0][0] * self.scales[0] + 1.1 * sc_deltas[0],
+            .5 * (self.extrema[1][1] + self.extrema[0][1]) * self.scales[1],
+            .5 * (self.extrema[1][2] + self.extrema[0][2]) * self.scales[2]
         )
         self.gl_widget.addItem(self._yzgrid)
 
         self.gl_widget.setXLabel('t', pos=[
-            extrema[0][0] * self.scales[0] + sc_deltas[0] - self.scales[0] * extrema[1][0],
-            extrema[0][1] * self.scales[1] + 0.35 * sc_deltas[1] - self.scales[1] * extrema[1][1],
-            extrema[0][2] * self.scales[2] + 0.4 * sc_deltas[2] - self.scales[2] * extrema[1][2]])
+            self.extrema[0][0] * self.scales[0] + sc_deltas[0] - self.scales[0] * self.extrema[1][0],
+            self.extrema[0][1] * self.scales[1] + 0.35 * sc_deltas[1] - self.scales[1] * self.extrema[1][1],
+            self.extrema[0][2] * self.scales[2] + 0.4 * sc_deltas[2] - self.scales[2] * self.extrema[1][2]])
         self.gl_widget.setYLabel('z', pos=[
-            extrema[0][0] * self.scales[0] + 0.35 * sc_deltas[0] - self.scales[0] * extrema[1][0],
-            extrema[0][1] * self.scales[1] + sc_deltas[1] - self.scales[1] * extrema[1][1],
-            extrema[0][2] * self.scales[2] + 0.4 * sc_deltas[2] - self.scales[2] * extrema[1][2]])
+            self.extrema[0][0] * self.scales[0] + 0.35 * sc_deltas[0] - self.scales[0] * self.extrema[1][0],
+            self.extrema[0][1] * self.scales[1] + sc_deltas[1] - self.scales[1] * self.extrema[1][1],
+            self.extrema[0][2] * self.scales[2] + 0.4 * sc_deltas[2] - self.scales[2] * self.extrema[1][2]])
         self.gl_widget.setZLabel(zlabel, pos=[
-            extrema[0][0] * self.scales[0] + 1.6 * sc_deltas[0] - self.scales[0] * extrema[1][0],
-            extrema[0][1] * self.scales[1] + 1.6 * sc_deltas[1] - self.scales[1] * extrema[1][1],
-            extrema[0][2] * self.scales[2] + 1.6 * sc_deltas[2] - self.scales[2] * extrema[1][2]])
-        self.cb.setCBRange(extrema[0, -1], extrema[1, -1])
+            self.extrema[0][0] * self.scales[0] + 1.6 * sc_deltas[0] - self.scales[0] * self.extrema[1][0],
+            self.extrema[0][1] * self.scales[1] + 1.6 * sc_deltas[1] - self.scales[1] * self.extrema[1][1],
+            self.extrema[0][2] * self.scales[2] + 1.6 * sc_deltas[2] - self.scales[2] * self.extrema[1][2]])
+        self.cb.setCBRange(self.extrema[0, -1], self.extrema[1, -1])
 
         # set origin (zoom point) to the middle of the figure
         # (a better way would be to realize it directly via a method of
         # self.gl_widget, instead to shift all items)
-        [item.translate(-self.scales[0] * extrema[1][0] + sc_deltas[0] / 2,
-                        -self.scales[1] * extrema[1][1] + sc_deltas[1] / 2,
-                        -self.scales[2] * extrema[1][2] + sc_deltas[2] / 2)
+        [item.translate(-self.scales[0] * self.extrema[1][0] + sc_deltas[0] / 2,
+                        -self.scales[1] * self.extrema[1][1] + sc_deltas[1] / 2,
+                        -self.scales[2] * self.extrema[1][2] + sc_deltas[2] / 2)
          for item in self.gl_widget.items]
 
     def _update_plot(self):
