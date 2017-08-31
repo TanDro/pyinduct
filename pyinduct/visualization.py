@@ -659,7 +659,7 @@ class PgSurfacePlot(PgDataPlot):
                 self._data[idx].output_data = np.moveaxis(self._data[idx].output_data,
                                                           animation_axis,
                                                           -1)
-                plot_item = gl.GLSurfacePlotItem(self.scales[0] * np.atleast_1d(self._data[idx].input_data[0]),
+                plot_item = gl.GLSurfacePlotItem(x=self.scales[0] * np.atleast_1d(self._data[idx].input_data[0]),
                                                  y=self.scales[1] * np.flipud(np.atleast_1d(
                                                      self._data[idx].input_data[1])),
                                                  z=self.scales[2] * self._data[idx].output_data[..., 0],
@@ -745,14 +745,14 @@ class PgSurfacePlot(PgDataPlot):
         Update the rendering
         """
         for idx, item in enumerate(self.plot_items):
-            z_data = self._data[idx].output_data[..., self.t_idx]
-            mapped_colors = self.mapping.to_rgba(z_data)
+            z_data = self.scales[2] * self._data[idx].output_data[..., self.t_idx]
+            mapped_colors = self.mapping.to_rgba(self._data[idx].output_data[..., self.t_idx])
             item.setData(z=z_data, colors=mapped_colors)
 
         self.t_idx += 1
 
         # TODO check if every array has enough timestamps in it
-        if self.t_idx >= len(self._data[0].input_data[0]):
+        if self.t_idx >= len(self._data[0].input_data[-1]):
             self.t_idx = 0
 
 
