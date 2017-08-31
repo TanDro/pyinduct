@@ -34,6 +34,7 @@ __all__ = ["show", "create_colormap", "PgAnimatedPlot", "PgSurfacePlot",
 colors = ["g", "c", "m", "b", "y", "k", "w", "r"]
 color_map = "viridis"
 
+
 # pg.setConfigOption('background', 'w')
 # pg.setConfigOption('foreground', 'k')
 
@@ -323,13 +324,64 @@ class PgAdvancedViewWidget(gl.GLViewWidget):
         self.posYLabel = [0, 1, 0]
         self.zlabel = 'z'
         self.posZLabel = [0, 0, 1]
+        self.xTics = np.linspace(0, 1, 6)
+        self.posXTics = []
+        self.posYTics = []
+        self.posZTics = []
+        self.xTics = np.linspace(0, 1, 6)
+        self.yTics = np.linspace(0, 1, 6)
+        self.zTics = np.linspace(0, 1, 6)
+        for i, pos in enumerate(np.linspace(0, 1, 13)):
+            if i % 2 == 1:
+                self.posXTics.append([pos, 0, 0])
+                self.posYTics.append([0, pos, 0])
+                self.posYTics.append([0, 0, pos])
+
+    def setXTics(self, xTics, pos):
+        """
+        Sets x tics on positions
+
+        Args:
+            xTics (list): x tics text to render
+            pos (list): position as list with [[x, y, z], [x, y, z], ...] coordinate
+        """
+        if len(xTics) != len(pos):
+            raise ValueError('Lists must have the same size!')
+        self.xTics = xTics
+        self.posXTics = pos
+
+    def setYTics(self, yTics, pos):
+        """
+        Sets y tics on positions
+
+        Args:
+            yTics (list): y tics text to render
+            pos (list): position as list with [[x, y, z], [x, y, z], ...] coordinate
+        """
+        if len(yTics) != len(pos):
+            raise ValueError('Lists must have the same size!')
+        self.yTics = yTics
+        self.posYTics = pos
+
+    def setZTics(self, zTics, pos):
+        """
+        Sets z tics on positions
+
+        Args:
+            zTics (list): z tics text to render
+            pos (list): position as list with [[x, y, z], [x, y, z], ...] coordinate
+        """
+        if len(zTics) != len(pos):
+            raise ValueError('Lists must have the same size!')
+        self.zTics = zTics
+        self.posZTics = pos
 
     def setXLabel(self, text, pos):
         """
         Sets x label on position
 
         Args:
-            test (str): x axis text to render
+            text (str): x axis text to render
             pos (list): position as list with [x, y, z] coordinate
         """
         self.xlabel = text
@@ -341,7 +393,7 @@ class PgAdvancedViewWidget(gl.GLViewWidget):
         Sets y label on position
 
         Args:
-            test (str): y axis text to render
+            text (str): y axis text to render
             pos (list): position as list with [x, y, z] coordinate
         """
         self.ylabel = text
@@ -353,7 +405,7 @@ class PgAdvancedViewWidget(gl.GLViewWidget):
         Sets z label on position
 
         Args:
-            test (str): z axis text to render
+            text (str): z axis text to render
             pos (list): position as list with [x, y, z] coordinate
         """
         self.zlabel = text
@@ -377,6 +429,22 @@ class PgAdvancedViewWidget(gl.GLViewWidget):
                         self.posZLabel[1],
                         self.posZLabel[2],
                         self.zlabel)
+
+        for i in range(len(self.xTics)):
+            self.renderText(self.posXTics[i][0],
+                            self.posXTics[i][1],
+                            self.posXTics[i][2],
+                            self.xTics[i])
+        for i in range(len(self.yTics)):
+            self.renderText(self.posYTics[i][0],
+                            self.posYTics[i][1],
+                            self.posYTics[i][2],
+                            self.yTics[i])
+        for i in range(len(self.zTics)):
+            self.renderText(self.posZTics[i][0],
+                            self.posZTics[i][1],
+                            self.posZTics[i][2],
+                            self.zTics[i])
 
 
 class PgColorBarWidget(pg.GraphicsLayoutWidget):
@@ -546,6 +614,8 @@ class PgSurfacePlot(PgDataPlot):
             Not implemented, yet and therefore defaults to 0 by now.
         title (str): Window title to display.
         zlabel (str): label for the z axis, default value: x(z,t)
+        ylabel (str): label for the y axis, default value: z
+        xlabel (str): label for the x axis, default value: t
     Todo:
         py attention to animation axis.
 
@@ -554,7 +624,16 @@ class PgSurfacePlot(PgDataPlot):
         event loop. Therefore remember to store a reference to this object.
     """
 
-    def __init__(self, data, scales=None, animation_axis=None, title="", zlabel='x(z,t)'):
+    def __init__(self,
+                 data,
+                 scales=None,
+                 animation_axis=None,
+                 title="",
+                 refresh_time=40,
+                 replay_gain=1,
+                 zlabel='x(z,t)',
+                 xlabel='t',
+                 ylabel='z'):
         """
 
         :type data: object
@@ -562,6 +641,10 @@ class PgSurfacePlot(PgDataPlot):
         PgDataPlot.__init__(self, data)
 
         layout = pg.QtGui.QGridLayout()
+
+        self.xlabel = xlabel
+        self.ylabel = ylabel
+        self.zlabel = zlabel
 
         self.gl_widget = PgAdvancedViewWidget()
         self.gl_widget.setWindowTitle(time.strftime("%H:%M:%S") + ' - ' + title)
@@ -659,6 +742,7 @@ class PgSurfacePlot(PgDataPlot):
                 self._data[idx].output_data = np.moveaxis(self._data[idx].output_data,
                                                           animation_axis,
                                                           -1)
+
                 plot_item = gl.GLSurfacePlotItem(x=self.scales[0] * np.atleast_1d(self._data[idx].input_data[0]),
                                                  y=self.scales[1] * np.flipud(np.atleast_1d(
                                                      self._data[idx].input_data[1])),
@@ -678,66 +762,118 @@ class PgSurfacePlot(PgDataPlot):
             self.plot_items.append(plot_item)
 
         if animation_axis is not None:
-            self.t_idx = 0
+            self.time_data = [np.atleast_1d(data_set.input_data[-1]) for data_set in self._data]
+            min_times = [min(data) for data in self.time_data]
+            max_times = [max(data) for data in self.time_data]
+            self._start_time = min(min_times)
+            self._end_time = max(max_times)
+            self._longest_idx = max_times.index(self._end_time)
+
+            assert refresh_time > 0
+            self._tr = refresh_time
+            assert replay_gain > 0
+            self._t_step = self._tr / 1000 * replay_gain
+
+            self._t = self._start_time
+
             self._timer = pg.QtCore.QTimer(self)
             self._timer.timeout.connect(self._update_plot)
-            self._timer.start(100)
+            self._timer.start(self._tr)
 
         # setup grids
-        sc_deltas = self.deltas * self.scales
+        self.sc_deltas = self.deltas * self.scales
         self._xygrid = gl.GLGridItem(size=pg.QtGui.QVector3D(1, 1, 1))
-        self._xygrid.setSpacing(sc_deltas[0] / 10, sc_deltas[1] / 10, 0)
-        self._xygrid.setSize(1.2 * sc_deltas[0], 1.2 * sc_deltas[1], 1)
+        self._xygrid.setSpacing(self.sc_deltas[0] / 10, self.sc_deltas[1] / 10, 0)
+        self._xygrid.setSize(1.2 * self.sc_deltas[0], 1.2 * self.sc_deltas[1], 1)
         self._xygrid.translate(
             .5 * (self.extrema[1][0] + self.extrema[0][0]) * self.scales[0],
             .5 * (self.extrema[1][1] + self.extrema[0][1]) * self.scales[1],
-            self.extrema[0][2] * self.scales[2] - 0.1 * sc_deltas[0]
+            self.extrema[0][2] * self.scales[2] - 0.1 * self.sc_deltas[0]
         )
         self.gl_widget.addItem(self._xygrid)
 
         self._xzgrid = gl.GLGridItem(size=pg.QtGui.QVector3D(1, 1, 1))
-        self._xzgrid.setSpacing(sc_deltas[0] / 10, sc_deltas[2] / 10, 0)
-        self._xzgrid.setSize(1.2 * sc_deltas[0], 1.2 * sc_deltas[2], 1)
+        self._xzgrid.setSpacing(self.sc_deltas[0] / 10, self.sc_deltas[2] / 10, 0)
+        self._xzgrid.setSize(1.2 * self.sc_deltas[0], 1.2 * self.sc_deltas[2], 1)
         self._xzgrid.rotate(90, 1, 0, 0)
         self._xzgrid.translate(
             .5 * (self.extrema[1][0] + self.extrema[0][0]) * self.scales[0],
-            self.extrema[0][1] * self.scales[1] + 1.1 * sc_deltas[0],
+            self.extrema[0][1] * self.scales[1] + 1.1 * self.sc_deltas[0],
             .5 * (self.extrema[1][2] + self.extrema[0][2]) * self.scales[2]
         )
         self.gl_widget.addItem(self._xzgrid)
 
         self._yzgrid = gl.GLGridItem(size=pg.QtGui.QVector3D(1, 1, 1))
-        self._yzgrid.setSpacing(sc_deltas[1] / 10, sc_deltas[2] / 10, 0)
-        self._yzgrid.setSize(1.2 * sc_deltas[1], 1.2 * sc_deltas[2], 1)
+        self._yzgrid.setSpacing(self.sc_deltas[1] / 10, self.sc_deltas[2] / 10, 0)
+        self._yzgrid.setSize(1.2 * self.sc_deltas[1], 1.2 * self.sc_deltas[2], 1)
         self._yzgrid.rotate(90, 1, 0, 0)
         self._yzgrid.rotate(90, 0, 0, 1)
         self._yzgrid.translate(
-            self.extrema[0][0] * self.scales[0] + 1.1 * sc_deltas[0],
+            self.extrema[0][0] * self.scales[0] + 1.1 * self.sc_deltas[0],
             .5 * (self.extrema[1][1] + self.extrema[0][1]) * self.scales[1],
             .5 * (self.extrema[1][2] + self.extrema[0][2]) * self.scales[2]
         )
         self.gl_widget.addItem(self._yzgrid)
 
-        self.gl_widget.setXLabel('t', pos=[
-            self.extrema[0][0] * self.scales[0] + sc_deltas[0] - self.scales[0] * self.extrema[1][0],
-            self.extrema[0][1] * self.scales[1] + 0.35 * sc_deltas[1] - self.scales[1] * self.extrema[1][1],
-            self.extrema[0][2] * self.scales[2] + 0.4 * sc_deltas[2] - self.scales[2] * self.extrema[1][2]])
-        self.gl_widget.setYLabel('z', pos=[
-            self.extrema[0][0] * self.scales[0] + 0.35 * sc_deltas[0] - self.scales[0] * self.extrema[1][0],
-            self.extrema[0][1] * self.scales[1] + sc_deltas[1] - self.scales[1] * self.extrema[1][1],
-            self.extrema[0][2] * self.scales[2] + 0.4 * sc_deltas[2] - self.scales[2] * self.extrema[1][2]])
-        self.gl_widget.setZLabel(zlabel, pos=[
-            self.extrema[0][0] * self.scales[0] + 1.6 * sc_deltas[0] - self.scales[0] * self.extrema[1][0],
-            self.extrema[0][1] * self.scales[1] + 1.6 * sc_deltas[1] - self.scales[1] * self.extrema[1][1],
-            self.extrema[0][2] * self.scales[2] + 1.6 * sc_deltas[2] - self.scales[2] * self.extrema[1][2]])
+        # labels
+        self.gl_widget.setXLabel(self.xlabel, pos=[
+            self.extrema[0][0] * self.scales[0] + self.sc_deltas[0] - self.scales[0] * self.extrema[1][0],
+            self.extrema[0][1] * self.scales[1] + 0.35 * self.sc_deltas[1] - self.scales[1] * self.extrema[1][1],
+            self.extrema[0][2] * self.scales[2] + 0.4 * self.sc_deltas[2] - self.scales[2] * self.extrema[1][2]])
+        self.gl_widget.setYLabel(self.ylabel, pos=[
+            self.extrema[0][0] * self.scales[0] + 0.35 * self.sc_deltas[0] - self.scales[0] * self.extrema[1][0],
+            self.extrema[0][1] * self.scales[1] + self.sc_deltas[1] - self.scales[1] * self.extrema[1][1],
+            self.extrema[0][2] * self.scales[2] + 0.4 * self.sc_deltas[2] - self.scales[2] * self.extrema[1][2]])
+        self.gl_widget.setZLabel(str(self.zlabel) + " t=0", pos=[
+            self.extrema[0][0] * self.scales[0] + 1.6 * self.sc_deltas[0] - self.scales[0] * self.extrema[1][0],
+            self.extrema[0][1] * self.scales[1] + 1.6 * self.sc_deltas[1] - self.scales[1] * self.extrema[1][1],
+            self.extrema[0][2] * self.scales[2] + 1.6 * self.sc_deltas[2] - self.scales[2] * self.extrema[1][2]])
+        # colorbar
         self.cb.setCBRange(self.extrema[0, -1], self.extrema[1, -1])
+        # tics
+        xTics = np.linspace(self.extrema[0, 0], self.extrema[1, 0], 6)
+        yTics = np.linspace(self.extrema[0, 1], self.extrema[1, 1], 6)
+        zTics = np.linspace(self.extrema[0, 2], self.extrema[1, 2], 6)
+        posXTics = []
+        posYTics = []
+        posZTics = []
+        for i, x in enumerate(np.linspace(0, self.extrema[0][0] * self.scales[0] + self.sc_deltas[0] - self.scales[0] *
+            self.extrema[1][0], 13)):
+            if i % 2 == 1:
+                posXTics.append([x,
+                                 self.extrema[0][1] * self.scales[1] + 0.35 * self.sc_deltas[1] - self.scales[1] *
+                                 self.extrema[1][1],
+                                 self.extrema[0][2] * self.scales[2] + 0.4 * self.sc_deltas[2] - self.scales[2] *
+                                 self.extrema[1][2]
+                                 ])
+        for i, y in enumerate(np.linspace(0, self.extrema[0][1] * self.scales[1] + self.sc_deltas[1] - self.scales[1] *
+            self.extrema[1][1], 13)):
+            if i % 2 == 1:
+                posYTics.append([self.extrema[0][0] * self.scales[0] + 0.35 * self.sc_deltas[0] - self.scales[0] *
+                                 self.extrema[1][0],
+                                 y,
+                                 self.extrema[0][2] * self.scales[2] + 0.4 * self.sc_deltas[2] - self.scales[2] *
+                                 self.extrema[1][2]])
+        for i, z in enumerate(np.linspace(0,
+                                          self.extrema[0][2] * self.scales[2] + 1.6 * self.sc_deltas[2] - self.scales[
+                                              2] * self.extrema[1][2], 13)):
+            if i % 2 == 1:
+                posYTics.append([self.extrema[0][0] * self.scales[0] + 1.6 * self.sc_deltas[0] - self.scales[0] *
+                                 self.extrema[1][0],
+                                 self.extrema[0][1] * self.scales[1] + 1.6 * self.sc_deltas[1] - self.scales[1] *
+                                 self.extrema[1][1],
+                                 z])
+
+        self.gl_widget.setXLabel(xTics, posXTics)
+        self.gl_widget.setXLabel(yTics, posYTics)
+        self.gl_widget.setXLabel(zTics, posZTics)
 
         # set origin (zoom point) to the middle of the figure
         # (a better way would be to realize it directly via a method of
         # self.gl_widget, instead to shift all items)
-        [item.translate(-self.scales[0] * self.extrema[1][0] + sc_deltas[0] / 2,
-                        -self.scales[1] * self.extrema[1][1] + sc_deltas[1] / 2,
-                        -self.scales[2] * self.extrema[1][2] + sc_deltas[2] / 2)
+        [item.translate(-self.scales[0] * self.extrema[1][0] + self.sc_deltas[0] / 2,
+                        -self.scales[1] * self.extrema[1][1] + self.sc_deltas[1] / 2,
+                        -self.scales[2] * self.extrema[1][2] + self.sc_deltas[2] / 2)
          for item in self.gl_widget.items]
 
     def _update_plot(self):
@@ -745,15 +881,23 @@ class PgSurfacePlot(PgDataPlot):
         Update the rendering
         """
         for idx, item in enumerate(self.plot_items):
-            z_data = self.scales[2] * self._data[idx].output_data[..., self.t_idx]
-            mapped_colors = self.mapping.to_rgba(self._data[idx].output_data[..., self.t_idx])
+            # find nearest time index (0th order interpolation)
+            t_idx = (np.abs(self.time_data[idx] - self._t)).argmin()
+
+            # update data
+            z_data = self.scales[2] * self._data[idx].output_data[..., t_idx]
+            mapped_colors = self.mapping.to_rgba(self._data[idx].output_data[..., t_idx])
             item.setData(z=z_data, colors=mapped_colors)
 
-        self.t_idx += 1
+        self.gl_widget.setZLabel(str(self.zlabel) + ' t= {0:.2f}'.format(self._t), pos=[
+            self.extrema[0][0] * self.scales[0] + 1.6 * self.sc_deltas[0] - self.scales[0] * self.extrema[1][0],
+            self.extrema[0][1] * self.scales[1] + 1.6 * self.sc_deltas[1] - self.scales[1] * self.extrema[1][1],
+            self.extrema[0][2] * self.scales[2] + 1.6 * self.sc_deltas[2] - self.scales[2] * self.extrema[1][2]])
 
-        # TODO check if every array has enough timestamps in it
-        if self.t_idx >= len(self._data[0].input_data[-1]):
-            self.t_idx = 0
+        self._t += self._t_step
+
+        if self._t > self._end_time:
+            self._t = self._start_time
 
 
 # TODO: alpha
@@ -829,7 +973,7 @@ class PgLinePlot2d(PgDataPlot):
         for idx, data_set in enumerate(self._data):
             self._plot_indexes.append(0)
             self._plot_data_items.append(pg.PlotDataItem(pen=pg.mkPen(cmap(idx / len(self._data), bytes=True),
-                                                         width=2), name=data_set.name))
+                                                                      width=2), name=data_set.name))
             self._pw.addItem(self._plot_data_items[-1])
             self._plot_data_items[idx].setData(x=self.xData[idx], y=self.yData[idx])
 
@@ -961,7 +1105,7 @@ class MplSlicePlot(PgDataPlot):
                  legend_location=1, figure_size=(10, 6)):
 
         if not ((isinstance(time_point, Number) ^ isinstance(spatial_point, Number)) and (
-                    isinstance(time_point, type(None)) ^ isinstance(spatial_point, type(None)))):
+                isinstance(time_point, type(None)) ^ isinstance(spatial_point, type(None)))):
             raise TypeError("Only one kwarg *_point can be passed,"
                             "which has to be an instance from type numbers.Number")
 
