@@ -15,6 +15,8 @@ import scipy.interpolate as si
 import pyqtgraph as pg
 import pyqtgraph.exporters
 import pyqtgraph.opengl as gl
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
@@ -324,7 +326,6 @@ class PgAdvancedViewWidget(gl.GLViewWidget):
         self.posYLabel = [0, 1, 0]
         self.zlabel = 'z'
         self.posZLabel = [0, 0, 1]
-        self.xTics = np.linspace(0, 1, 6)
         self.posXTics = []
         self.posYTics = []
         self.posZTics = []
@@ -335,7 +336,15 @@ class PgAdvancedViewWidget(gl.GLViewWidget):
             if i % 2 == 1:
                 self.posXTics.append([pos, 0, 0])
                 self.posYTics.append([0, pos, 0])
-                self.posYTics.append([0, 0, pos])
+                self.posZTics.append([0, 0, pos])
+
+        self.showAllTics = False
+        self.shortcut = QShortcut(QKeySequence("a"), self)
+        self.shortcut.activated.connect(self.showTics)
+
+    def showTics(self):
+        self.showAllTics = not self.showAllTics
+        self.update()
 
     def setXTics(self, xTics, pos):
         """
@@ -349,6 +358,7 @@ class PgAdvancedViewWidget(gl.GLViewWidget):
             raise ValueError('Lists must have the same size!')
         self.xTics = xTics
         self.posXTics = pos
+        self.update()
 
     def setYTics(self, yTics, pos):
         """
@@ -362,6 +372,7 @@ class PgAdvancedViewWidget(gl.GLViewWidget):
             raise ValueError('Lists must have the same size!')
         self.yTics = yTics
         self.posYTics = pos
+        self.update()
 
     def setZTics(self, zTics, pos):
         """
@@ -375,6 +386,7 @@ class PgAdvancedViewWidget(gl.GLViewWidget):
             raise ValueError('Lists must have the same size!')
         self.zTics = zTics
         self.posZTics = pos
+        self.update()
 
     def setXLabel(self, text, pos):
         """
@@ -430,21 +442,38 @@ class PgAdvancedViewWidget(gl.GLViewWidget):
                         self.posZLabel[2],
                         self.zlabel)
 
-        for i in range(len(self.xTics)):
-            self.renderText(self.posXTics[i][0],
-                            self.posXTics[i][1],
-                            self.posXTics[i][2],
-                            self.xTics[i])
-        for i in range(len(self.yTics)):
-            self.renderText(self.posYTics[i][0],
-                            self.posYTics[i][1],
-                            self.posYTics[i][2],
-                            self.yTics[i])
-        for i in range(len(self.zTics)):
-            self.renderText(self.posZTics[i][0],
-                            self.posZTics[i][1],
-                            self.posZTics[i][2],
-                            self.zTics[i])
+        if self.showAllTics:
+            for i in range(len(self.xTics)):
+                self.renderText(self.posXTics[i][0],
+                                self.posXTics[i][1],
+                                self.posXTics[i][2],
+                                '{:.1f}'.format(self.xTics[i]))
+            for i in range(len(self.yTics)):
+                self.renderText(self.posYTics[i][0],
+                                self.posYTics[i][1],
+                                self.posYTics[i][2],
+                                '{:.1f}'.format(self.yTics[i]))
+            for i in range(len(self.zTics)):
+                self.renderText(self.posZTics[i][0],
+                                self.posZTics[i][1],
+                                self.posZTics[i][2],
+                                '{:.1f}'.format(self.zTics[i]))
+        else:
+            for i in range(len(self.xTics)):
+                self.renderText(self.posXTics[i][0],
+                                self.posXTics[i][1],
+                                self.posXTics[i][2],
+                                str())
+            for i in range(len(self.yTics)):
+                self.renderText(self.posYTics[i][0],
+                                self.posYTics[i][1],
+                                self.posYTics[i][2],
+                                str())
+            for i in range(len(self.zTics)):
+                self.renderText(self.posZTics[i][0],
+                                self.posZTics[i][1],
+                                self.posZTics[i][2],
+                                str())
 
 
 class PgColorBarWidget(pg.GraphicsLayoutWidget):
@@ -824,49 +853,59 @@ class PgSurfacePlot(PgDataPlot):
             self.extrema[0][0] * self.scales[0] + 0.35 * self.sc_deltas[0] - self.scales[0] * self.extrema[1][0],
             self.extrema[0][1] * self.scales[1] + self.sc_deltas[1] - self.scales[1] * self.extrema[1][1],
             self.extrema[0][2] * self.scales[2] + 0.4 * self.sc_deltas[2] - self.scales[2] * self.extrema[1][2]])
-        self.gl_widget.setZLabel(str(self.zlabel) + " t=0", pos=[
-            self.extrema[0][0] * self.scales[0] + 1.6 * self.sc_deltas[0] - self.scales[0] * self.extrema[1][0],
-            self.extrema[0][1] * self.scales[1] + 1.6 * self.sc_deltas[1] - self.scales[1] * self.extrema[1][1],
-            self.extrema[0][2] * self.scales[2] + 1.6 * self.sc_deltas[2] - self.scales[2] * self.extrema[1][2]])
+        if animation_axis is not None:
+            self.gl_widget.setZLabel(str(self.zlabel) + " t=0", pos=[
+                self.extrema[0][0] * self.scales[0] + 1.6 * self.sc_deltas[0] - self.scales[0] * self.extrema[1][0],
+                self.extrema[0][1] * self.scales[1] + 1.6 * self.sc_deltas[1] - self.scales[1] * self.extrema[1][1],
+                self.extrema[0][2] * self.scales[2] + 1.6 * self.sc_deltas[2] - self.scales[2] * self.extrema[1][2]])
+        else:
+            self.gl_widget.setZLabel(self.zlabel, pos=[
+                self.extrema[0][0] * self.scales[0] + 1.6 * self.sc_deltas[0] - self.scales[0] * self.extrema[1][0],
+                self.extrema[0][1] * self.scales[1] + 1.6 * self.sc_deltas[1] - self.scales[1] * self.extrema[1][1],
+                self.extrema[0][2] * self.scales[2] + 1.6 * self.sc_deltas[2] - self.scales[2] * self.extrema[1][2]])
+
         # colorbar
         self.cb.setCBRange(self.extrema[0, -1], self.extrema[1, -1])
         # tics
-        xTics = np.linspace(self.extrema[0, 0], self.extrema[1, 0], 6)
-        yTics = np.linspace(self.extrema[0, 1], self.extrema[1, 1], 6)
+        xTics = np.linspace(self.extrema[0, 1], self.extrema[1, 1], 6)
+        yTics = np.linspace(self.extrema[0, 0], self.extrema[1, 0], 6)
         zTics = np.linspace(self.extrema[0, 2], self.extrema[1, 2], 6)
         posXTics = []
         posYTics = []
         posZTics = []
-        for i, x in enumerate(np.linspace(0, self.extrema[0][0] * self.scales[0] + self.sc_deltas[0] - self.scales[0] *
-            self.extrema[1][0], 13)):
+        for i, x in enumerate(np.linspace(self.extrema[0][0] * self.scales[0] + 1.6 * self.sc_deltas[0] - self.scales[0] * self.extrema[1][0],
+                                          self.extrema[0][0] * self.scales[0] + 0.4 * self.sc_deltas[0] - self.scales[0] * self.extrema[1][0],
+                                          13)):
             if i % 2 == 1:
-                posXTics.append([x,
-                                 self.extrema[0][1] * self.scales[1] + 0.35 * self.sc_deltas[1] - self.scales[1] *
+                posXTics.append([self.extrema[0][1] * self.scales[1] + 0.35 * self.sc_deltas[1] - self.scales[1] *
                                  self.extrema[1][1],
+                                 x,
                                  self.extrema[0][2] * self.scales[2] + 0.4 * self.sc_deltas[2] - self.scales[2] *
                                  self.extrema[1][2]
                                  ])
-        for i, y in enumerate(np.linspace(0, self.extrema[0][1] * self.scales[1] + self.sc_deltas[1] - self.scales[1] *
-            self.extrema[1][1], 13)):
+        for i, y in enumerate(np.linspace(self.extrema[0][1] * self.scales[1] + 0.4 * self.sc_deltas[1] - self.scales[1] * self.extrema[1][1],
+                                          self.extrema[0][1] * self.scales[1] + 1.6 * self.sc_deltas[1] - self.scales[1] * self.extrema[1][1],
+                                          13)):
             if i % 2 == 1:
-                posYTics.append([self.extrema[0][0] * self.scales[0] + 0.35 * self.sc_deltas[0] - self.scales[0] *
+                posYTics.append([y,
+                                 self.extrema[0][0] * self.scales[0] + 0.35 * self.sc_deltas[0] - self.scales[0] *
                                  self.extrema[1][0],
-                                 y,
                                  self.extrema[0][2] * self.scales[2] + 0.4 * self.sc_deltas[2] - self.scales[2] *
                                  self.extrema[1][2]])
-        for i, z in enumerate(np.linspace(0,
-                                          self.extrema[0][2] * self.scales[2] + 1.6 * self.sc_deltas[2] - self.scales[
-                                              2] * self.extrema[1][2], 13)):
+        for i, z in enumerate(
+            np.linspace(self.extrema[0][2] * self.scales[2] + 0.4 * self.sc_deltas[1] - self.scales[1] * self.extrema[1][1],
+                        self.extrema[0][2] * self.scales[2] + 1.6 * self.sc_deltas[2] - self.scales[2] * self.extrema[1][2],
+                        13)):
             if i % 2 == 1:
-                posYTics.append([self.extrema[0][0] * self.scales[0] + 1.6 * self.sc_deltas[0] - self.scales[0] *
+                posZTics.append([self.extrema[0][0] * self.scales[0] + 1.6 * self.sc_deltas[0] - self.scales[0] *
                                  self.extrema[1][0],
                                  self.extrema[0][1] * self.scales[1] + 1.6 * self.sc_deltas[1] - self.scales[1] *
                                  self.extrema[1][1],
                                  z])
 
-        self.gl_widget.setXLabel(xTics, posXTics)
-        self.gl_widget.setXLabel(yTics, posYTics)
-        self.gl_widget.setXLabel(zTics, posZTics)
+        self.gl_widget.setXTics(xTics, posXTics)
+        self.gl_widget.setYTics(yTics, posYTics)
+        self.gl_widget.setZTics(zTics, posZTics)
 
         # set origin (zoom point) to the middle of the figure
         # (a better way would be to realize it directly via a method of
