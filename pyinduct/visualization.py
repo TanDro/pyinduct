@@ -11,6 +11,7 @@ already provide the simulation result as EvalData object.
 import numpy as np
 import time
 import os
+import copy as cp
 import scipy.interpolate as si
 import pyqtgraph as pg
 import pyqtgraph.exporters
@@ -322,10 +323,14 @@ class PgAdvancedViewWidget(gl.GLViewWidget):
         super(PgAdvancedViewWidget, self).__init__()
         self.xlabel = 'x'
         self.posXLabel = [1, 0, 0]
+
         self.ylabel = 'y'
         self.posYLabel = [0, 1, 0]
+
         self.zlabel = 'z'
         self.posZLabel = [0, 0, 1]
+        self.oldPosZLabel = cp.copy(self.posZLabel)
+
         self.posXTics = []
         self.posYTics = []
         self.posZTics = []
@@ -437,10 +442,16 @@ class PgAdvancedViewWidget(gl.GLViewWidget):
                         self.posYLabel[1],
                         self.posYLabel[2],
                         self.ylabel)
+
+        self.renderText(self.oldPosZLabel[0],
+                        self.oldPosZLabel[1],
+                        self.oldPosZLabel[2],
+                        " " * 20)
         self.renderText(self.posZLabel[0],
                         self.posZLabel[1],
                         self.posZLabel[2],
                         self.zlabel)
+        self.oldPosZLabel = cp.copy(self.posZLabel)
 
         if self.showAllTics:
             for i in range(len(self.xTics)):
