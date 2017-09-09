@@ -904,7 +904,7 @@ class PgSurfacePlot(PgDataPlot):
                                  self.extrema[0][2] * self.scales[2] + 0.4 * self.sc_deltas[2] - self.scales[2] *
                                  self.extrema[1][2]])
         for i, z in enumerate(
-            np.linspace(self.extrema[0][2] * self.scales[2] + 0.4 * self.sc_deltas[1] - self.scales[1] * self.extrema[1][1],
+            np.linspace(self.extrema[0][2] * self.scales[2] + 0.4 * self.sc_deltas[2] - self.scales[2] * self.extrema[1][2],
                         self.extrema[0][2] * self.scales[2] + 1.6 * self.sc_deltas[2] - self.scales[2] * self.extrema[1][2],
                         13)):
             if i % 2 == 1:
