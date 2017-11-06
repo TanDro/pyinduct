@@ -1694,16 +1694,17 @@ class EvalData:
     Convenience wrapper for function evaluation.
     Contains the input data that was used for evaluation and the results.
     """
-    def __init__(self, input_data, output_data, name=""):
+    def __init__(self, input_data, output_data, name="", check=True):
         # check type and dimensions
         assert isinstance(input_data, list)
         assert isinstance(output_data, np.ndarray)
 
-        # output_data has to contain at least len(input_data) dimensions
-        assert len(input_data) <= len(output_data.shape)
+        if check:
+            # output_data has to contain at least len(input_data) dimensions
+            assert len(input_data) <= len(output_data.shape)
 
-        for dim in range(len(input_data)):
-            assert len(input_data[dim]) == output_data.shape[dim]
+            for dim in range(len(input_data)):
+                assert len(input_data[dim]) == output_data.shape[dim]
 
         self.input_data = input_data
         if output_data.size == 0:
