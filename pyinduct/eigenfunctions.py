@@ -983,7 +983,7 @@ class SecondOrderRobinEigenfunction(Function, SecondOrderEigenfunction):
             plt.show()
 
         # assume 1 root per pi/l (safety factor = 3)
-        search_begin = np.pi / l * .0001
+        search_begin = 0
         search_end = 3 * n_roots * np.pi / l
         start_values_real = np.linspace(search_begin,
                                         search_end,
@@ -1123,7 +1123,7 @@ class SecondOrderRobDiriEigenfunction(SecondOrderRobinEigenfunction):
             plt.show()
 
         # assume 1 root per pi/l (safety factor = 3)
-        search_begin = np.pi / l * .1
+        search_begin = 0
         search_end = 3 * n_roots * np.pi / l
         start_values_real = np.linspace(search_begin,
                                         search_end,
@@ -1279,7 +1279,7 @@ class SecondOrderDiriRobEigenfunction(LambdifiedSympyExpression, SecondOrderRobD
             plt.show()
 
         # assume 1 root per pi/l (safety factor = 3)
-        search_begin = np.pi / l * .1
+        search_begin = 0
         search_end = 3 * n_roots * np.pi / l
         start_values_real = np.linspace(search_begin,
                                         search_end,
