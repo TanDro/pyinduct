@@ -33,7 +33,9 @@ def show(show_pg=True, show_mpl=True, force=False):
 
 
 class DoubleSlider(pg.QtGui.QSlider):
-
+    """
+    Derived class of QSlider for double values
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.decimals = 3
@@ -77,11 +79,10 @@ class DoubleSlider(pg.QtGui.QSlider):
 
 
 class AdSlider(pg.QtGui.QWidget):
-
+    """
+    Advanced Slider class for combinated start/stop buttons a slider and two labels for current and max position
+    """
     def __init__(self, parent=None):
-        # TODO shortcuts for play/pause
-        # TODO current time / total time
-        # TODO edit widths
         super(AdSlider, self).__init__(parent)
         self.hBoxLayout = pg.QtGui.QHBoxLayout()
         self.playButton = pg.QtGui.QPushButton()
@@ -247,17 +248,23 @@ class PgAnimation(PgDataPlot):
         self.slider.pauseButton.setEnabled(True)
 
         self.slider.textLabelTotal.setText(str(self._end_time))
-        self.slider.textLabelCurrent.setFixedWidth(self.slider.textLabelTotal.width() + 5)
+        self.slider.textLabelCurrent.setFixedWidth(self.slider.textLabelTotal.width() + 13)
         self.slider.textLabelCurrent.setText(str(self._start_time))
         self.slider.slider.setMinimum(self._start_time)
         self.slider.slider.setMaximum(self._end_time)
         self.slider.slider.setValue(self._start_time)
         self.slider.slider.sliderPressed.connect(self._userSlider)
-        self.slider.slider.sliderMoved.connect(self._movePlot)
+        self.slider.slider.sliderMoved.connect(self.movePlot)
 
         # buttons
         self.slider.playButton.clicked.connect(self.playAnimation)
         self.slider.pauseButton.clicked.connect(self.stopAnimation)
+
+        # shortcuts
+        self.shortcutStop = QShortcut(QKeySequence("s"), self.slider)
+        self.shortcutStop.activated.connect(self.stopAnimation)
+        self.shortcutPlay = QShortcut(QKeySequence("p"), self.slider)
+        self.shortcutPlay.activated.connect(self.playAnimation)
 
         assert refresh_time > 0
         self._tr = refresh_time
@@ -268,18 +275,18 @@ class PgAnimation(PgDataPlot):
 
         self.playAnimation()
 
-    # TODO sliderReleased für user bearbeitung, und bild update
     # TODO make abstract implementation in special classes
     def _userSlider(self):
         self.slider.playButton.setEnabled(True)
         self.slider.pauseButton.setEnabled(False)
         if self._timer is not None:
             self._timer.stop()
+        self.movePlot()
 
-    def _movePlot(self):
+    def movePlot(self):
         pass
 
-    def _update_plot(self):
+    def updatePlot(self):
         pass
 
     def playAnimation(self):
@@ -288,7 +295,7 @@ class PgAnimation(PgDataPlot):
         if self._timer is not None:
             self._timer.stop()
         self._timer = pg.QtCore.QTimer()
-        self._timer.timeout.connect(self._update_plot)
+        self._timer.timeout.connect(self.updatePlot)
         self._timer.start(self._tr)
 
     def stopAnimation(self):
@@ -669,7 +676,7 @@ class _PgSurfacePlotAnimation(PgAnimation):
                         -self.scales[2] * self.extrema[1][2] + self.sc_deltas[2] / 2)
          for item in self.plotWidget.items]
 
-    def _update_plot(self):
+    def updatePlot(self):
         """
         Update the rendering
         """
@@ -689,7 +696,7 @@ class _PgSurfacePlotAnimation(PgAnimation):
         if self._t > self._end_time:
             self._t = self._start_time
 
-    def _movePlot(self):
+    def movePlot(self):
         """
         Update the rendering by user
         """
@@ -770,7 +777,7 @@ class _Pg2DPlotAnimation(PgAnimation):
                                                                       width=2), name=data_set.name))
             self.plotWidget.addItem(self._plot_data_items[-1])
 
-    def _update_plot(self):
+    def updatePlot(self):
         """
         Update the rendering
         """
@@ -788,7 +795,7 @@ class _Pg2DPlotAnimation(PgAnimation):
         if self._t > self._end_time:
             self._t = self._start_time
 
-    def _movePlot(self):
+    def movePlot(self):
         """
         Update the rendering by User
         """
