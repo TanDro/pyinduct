@@ -1,4 +1,5 @@
 # coding=utf-8
+import platform
 import numpy as np
 import copy as cp
 import pyqtgraph as pg
@@ -1060,64 +1061,64 @@ class PgAdvancedViewWidget(gl.GLViewWidget):
         Overrides painGL function to render the text labels
         """
         gl.GLViewWidget.paintGL(self, *args, **kwds)
-        self.renderText(self.posXLabel[0],
-                        self.posXLabel[1],
-                        self.posXLabel[2],
-                        self.xlabel)
-        self.renderText(self.posYLabel[0],
-                        self.posYLabel[1],
-                        self.posYLabel[2],
-                        self.ylabel)
+        if platform.system() != 'Darwin':
+            self.renderText(self.posXLabel[0],
+                            self.posXLabel[1],
+                            self.posXLabel[2],
+                            self.xlabel)
+            self.renderText(self.posYLabel[0],
+                            self.posYLabel[1],
+                            self.posYLabel[2],
+                            self.ylabel)
 
-        self.renderText(self.oldPosZLabel[0],
-                        self.oldPosZLabel[1],
-                        self.oldPosZLabel[2],
-                        " " * 20)
-        self.renderText(self.posZLabel[0],
-                        self.posZLabel[1],
-                        self.posZLabel[2],
-                        self.zlabel)
-        self.oldPosZLabel = cp.copy(self.posZLabel)
+            self.renderText(self.oldPosZLabel[0],
+                            self.oldPosZLabel[1],
+                            self.oldPosZLabel[2],
+                            " " * 20)
+            self.renderText(self.posZLabel[0],
+                            self.posZLabel[1],
+                            self.posZLabel[2],
+                            self.zlabel)
+            self.oldPosZLabel = cp.copy(self.posZLabel)
 
-        if self.showAllTics:
-            for i in range(len(self.xTics)):
-                self.renderText(self.posXTics[i][0],
-                                self.posXTics[i][1],
-                                self.posXTics[i][2],
-                                '{:.1f}'.format(self.xTics[i]))
-            for i in range(len(self.yTics)):
-                self.renderText(self.posYTics[i][0],
-                                self.posYTics[i][1],
-                                self.posYTics[i][2],
-                                '{:.1f}'.format(self.yTics[i]))
-            for i in range(len(self.zTics)):
-                self.renderText(self.posZTics[i][0],
-                                self.posZTics[i][1],
-                                self.posZTics[i][2],
-                                '{:.1f}'.format(self.zTics[i]))
-        else:
-            for i in range(len(self.xTics)):
-                self.renderText(self.posXTics[i][0],
-                                self.posXTics[i][1],
-                                self.posXTics[i][2],
-                                str())
-            for i in range(len(self.yTics)):
-                self.renderText(self.posYTics[i][0],
-                                self.posYTics[i][1],
-                                self.posYTics[i][2],
-                                str())
-            for i in range(len(self.zTics)):
-                self.renderText(self.posZTics[i][0],
-                                self.posZTics[i][1],
-                                self.posZTics[i][2],
-                                str())
+            if self.showAllTics:
+                for i in range(len(self.xTics)):
+                    self.renderText(self.posXTics[i][0],
+                                    self.posXTics[i][1],
+                                    self.posXTics[i][2],
+                                    '{:.1f}'.format(self.xTics[i]))
+                for i in range(len(self.yTics)):
+                    self.renderText(self.posYTics[i][0],
+                                    self.posYTics[i][1],
+                                    self.posYTics[i][2],
+                                    '{:.1f}'.format(self.yTics[i]))
+                for i in range(len(self.zTics)):
+                    self.renderText(self.posZTics[i][0],
+                                    self.posZTics[i][1],
+                                    self.posZTics[i][2],
+                                    '{:.1f}'.format(self.zTics[i]))
+            else:
+                for i in range(len(self.xTics)):
+                    self.renderText(self.posXTics[i][0],
+                                    self.posXTics[i][1],
+                                    self.posXTics[i][2],
+                                    str())
+                for i in range(len(self.yTics)):
+                    self.renderText(self.posYTics[i][0],
+                                    self.posYTics[i][1],
+                                    self.posYTics[i][2],
+                                    str())
+                for i in range(len(self.zTics)):
+                    self.renderText(self.posZTics[i][0],
+                                    self.posZTics[i][1],
+                                    self.posZTics[i][2],
+                                    str())
 
 
 class PgColorBarWidget(pg.GraphicsLayoutWidget):
     """
     OpenGL Widget that depends on GraphicsLayoutWidget and realizes an axis and a color bar
     """
-
     def __init__(self, colorMap):
         super(PgColorBarWidget, self).__init__()
 
