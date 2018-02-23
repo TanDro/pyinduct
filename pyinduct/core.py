@@ -1812,7 +1812,9 @@ class EvalData:
             if len(input_data[0]) > 2 and len(input_data[1]) > 2:
                 # special treatment for very common case (faster than interp2d)
                 self._interpolator = RectBivariateSpline(*input_data,
-                                                         output_data)
+                                                         output_data,
+                                                         kx=2,
+                                                         ky=2)
             else:
                 self._interpolator = interp2d(input_data[0],
                                               input_data[1],
