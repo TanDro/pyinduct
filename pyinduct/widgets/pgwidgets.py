@@ -185,6 +185,8 @@ class PgDataPlot(DataPlot, pg.QtCore.QObject):
             self.generate3DWindow()
         elif plotType == '2D-Animation':
             self.generate2DAnimaionWindow()
+        elif plotType == '2D-PipeAnimation':
+            self.generate2DPipeAnimationWindow()
         elif plotType == '3D-Animation':
             self.generate3DAnimaionWindow()
         else:
@@ -230,6 +232,24 @@ class PgDataPlot(DataPlot, pg.QtCore.QObject):
         self.w.resize(self.windowWidth, self.windowHeight)
         self.w.setLayout(layout)
         self.w.show()
+
+    def generate2DPipeAnimationWindow(self):
+        layout = pg.QtGui.QGridLayout()
+        self.plotWidget = pg.PlotWidget()
+        self.plotWidget.sizeHint = lambda: pg.QtCore.QSize(self.windowWidth, self.windowHeight)
+        self.colorBar = PgColorBarWidget(self.colorMap)
+        self.plotWidget.setSizePolicy(self.colorBar.sizePolicy())
+        self.slider = AdSlider()
+        layout.addWidget(self.plotWidget, 0, 0)
+        layout.addWidget(self.colorBar, 0, 1)
+        layout.addWidget(self.slider, 1, 0)
+        self.colorBar.sizeHint = lambda: pg.QtCore.QSize(self.colorbarWidth, self.windowHeight)
+        layout.setHorizontalSpacing(0)
+        self.w = pg.QtGui.QWidget()
+        self.w.resize(self.windowWidth, self.windowHeight)
+        self.w.setLayout(layout)
+        self.w.show()
+
 
     def generate3DAnimaionWindow(self):
         layout = pg.QtGui.QGridLayout()
@@ -834,6 +854,75 @@ class _Pg2DPlotAnimation(PgAnimation):
 
             # update data
             self._plot_data_items[idx].setData(x=self.spatial_data[idx], y=_interpolData)
+
+
+
+class Pg2DPipeAnimation(PgAnimation):
+    def __init__(self, **kwargs):
+        # initialize parent classes
+        PgAnimation.__init__(self, **kwargs)
+
+        #
+        self.spatial_data = [np.atleast_1d(data_set.input_data[1]) for data_set in self._data]
+        self.state_data = [data_set.output_data for data_set in self._data]
+
+        # set axis
+        spat_min = np.min([np.min(data) for data in self.spatial_data])
+        spat_max = np.max([np.max(data) for data in self.spatial_data])
+        self.plotWidget.setXRange(spat_min, spat_max)
+
+        state_min = np.min([np.min(data) for data in self.state_data])
+        state_max = np.max([np.max(data) for data in self.state_data])
+        self.plotWidget.setYRange(state_min, state_max)
+
+        # setup color map
+        norm = mpl.colors.Normalize(vmin=state_min,
+                                    vmax=state_max)
+        self.mapping = cm.ScalarMappable(norm, self.colorMap)
+
+        # set range of colorbar: [0, 1] --> [Tmin, Tmax]
+        self.colorBar.setCBRange(state_min, state_max)
+
+        self._plot_data_items = []
+        self._plot_indexes = []
+        colorMap = cm.get_cmap(self.colorMap)
+        for idx, data_set in enumerate(self._data):
+            self._plot_data_items.append(pg.PlotDataItem(pen=pg.mkPen(colorMap(idx / len(self._data), bytes=True),
+                                                                      width=2), name=data_set.name, colors=self.mapping.to_rgba(self._data[idx].output_data)))
+            self.plotWidget.addItem(self._plot_data_items[-1])
+
+    def updatePlot(self):
+        """
+        Update the rendering
+        """
+        for idx, item in enumerate(self._data):
+            axis = [[self._t], self.spatial_data[idx]]
+            _interpolData = item._interpolator(*axis)[0]
+
+            # update data
+            self.slider.textLabelCurrent.setText(str(self._t))
+            self.slider.slider.setValue(self._t)
+            self._plot_data_items[idx].setData(x=self.spatial_data[idx], y=_interpolData)
+
+        self._t += self._t_step
+
+        if self._t > self._end_time:
+            self._t = self._start_time
+
+    def movePlot(self):
+        """
+        Update the rendering by User
+        """
+        self._t = self.slider.slider.value()
+        self.slider.textLabelCurrent.setText(str(self._t))
+        for idx, item in enumerate(self._data):
+            axis = [[self._t], self.spatial_data[idx]]
+            _interpolData = item._interpolator(*axis)[0]
+
+            # update data
+            self._plot_data_items[idx].setData(x=self.spatial_data[idx], y=_interpolData)
+
+
 
 
 class PgGradientWidget(pg.GraphicsWidget):
