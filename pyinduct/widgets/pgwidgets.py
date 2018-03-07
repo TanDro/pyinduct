@@ -187,6 +187,8 @@ class PgDataPlot(DataPlot, pg.QtCore.QObject):
             self.generate2DAnimaionWindow()
         elif plotType == '3D-Animation':
             self.generate3DAnimaionWindow()
+        elif plotType == '2D-PipeAnimation':
+            self.generatePipeAnimaionWindow()
         else:
             raise ValueError
 
@@ -234,6 +236,26 @@ class PgDataPlot(DataPlot, pg.QtCore.QObject):
     def generate3DAnimaionWindow(self):
         layout = pg.QtGui.QGridLayout()
         self.plotWidget = PgAdvancedViewWidget()
+        self.plotWidget.setCameraPosition(distance=3, azimuth=-135)
+        self.colorBar = PgColorBarWidget(self.colorMap)
+        self.plotWidget.setSizePolicy(self.colorBar.sizePolicy())
+        self.slider = AdSlider()
+        layout.addWidget(self.plotWidget, 0, 0)
+        layout.addWidget(self.colorBar, 0, 1)
+        layout.addWidget(self.slider, 1, 0, 1, 2)
+        layout.setColumnStretch(1, 0)
+        layout.setColumnMinimumWidth(1, self.colorbarWidth)
+        layout.setColumnStretch(0, 1)
+        self.colorBar.sizeHint = lambda: pg.QtCore.QSize(self.colorbarWidth, self.windowHeight)
+        layout.setHorizontalSpacing(0)
+        self.w = pg.QtGui.QWidget()
+        self.w.resize(self.windowWidth, self.windowHeight)
+        self.w.setLayout(layout)
+        self.w.show()
+
+    def generatePipeAnimaionWindow(self):
+        layout = pg.QtGui.QGridLayout()
+        self.plotWidget = PgAdvancedViewWidget(x='', y='', z='')
         self.plotWidget.setCameraPosition(distance=3, azimuth=-135)
         self.colorBar = PgColorBarWidget(self.colorMap)
         self.plotWidget.setSizePolicy(self.colorBar.sizePolicy())
@@ -399,7 +421,7 @@ class _PgSurfacePlot(PgDataPlot):
                                                  self._data[idx].input_data[1])),
                                              z=self.scales[2] * self._data[idx].output_data,
                                              colors=self.mapping.to_rgba(self._data[idx].output_data),
-                                             computeNormals=False)
+                                             computeNormals=True)
 
             self.plotWidget.addItem(plot_item)
             self.plot_items.append(plot_item)
@@ -463,10 +485,10 @@ class _PgSurfacePlot(PgDataPlot):
         posYTics = []
         posZTics = []
         for i, x in enumerate(np.linspace(
-                        self.extrema[0][0] * self.scales[0] + 1.6 * self.sc_deltas[0] - self.scales[0] *
-                self.extrema[1][0],
-                        self.extrema[0][0] * self.scales[0] + 0.4 * self.sc_deltas[0] - self.scales[0] *
-                self.extrema[1][0],
+            self.extrema[0][0] * self.scales[0] + 1.6 * self.sc_deltas[0] - self.scales[0] *
+            self.extrema[1][0],
+            self.extrema[0][0] * self.scales[0] + 0.4 * self.sc_deltas[0] - self.scales[0] *
+            self.extrema[1][0],
             13)):
             if i % 2 == 1:
                 posXTics.append([self.extrema[0][1] * self.scales[1] + 0.35 * self.sc_deltas[1] - self.scales[1] *
@@ -476,10 +498,10 @@ class _PgSurfacePlot(PgDataPlot):
                                  self.extrema[1][2]
                                  ])
         for i, y in enumerate(np.linspace(
-                        self.extrema[0][1] * self.scales[1] + 0.4 * self.sc_deltas[1] - self.scales[1] *
-                self.extrema[1][1],
-                        self.extrema[0][1] * self.scales[1] + 1.6 * self.sc_deltas[1] - self.scales[1] *
-                self.extrema[1][1],
+            self.extrema[0][1] * self.scales[1] + 0.4 * self.sc_deltas[1] - self.scales[1] *
+            self.extrema[1][1],
+            self.extrema[0][1] * self.scales[1] + 1.6 * self.sc_deltas[1] - self.scales[1] *
+            self.extrema[1][1],
             13)):
             if i % 2 == 1:
                 posYTics.append([y,
@@ -489,9 +511,9 @@ class _PgSurfacePlot(PgDataPlot):
                                  self.extrema[1][2]])
         for i, z in enumerate(
             np.linspace(self.extrema[0][2] * self.scales[2] + 0.4 * self.sc_deltas[2] - self.scales[2] *
-                self.extrema[1][2],
+                        self.extrema[1][2],
                         self.extrema[0][2] * self.scales[2] + 1.6 * self.sc_deltas[2] - self.scales[2] *
-                            self.extrema[1][2],
+                        self.extrema[1][2],
                         13)):
             if i % 2 == 1:
                 posZTics.append([self.extrema[0][0] * self.scales[0] + 1.6 * self.sc_deltas[0] - self.scales[0] *
@@ -654,10 +676,10 @@ class _PgSurfacePlotAnimation(PgAnimation):
         posYTics = []
         posZTics = []
         for i, x in enumerate(np.linspace(
-                        self.extrema[0][0] * self.scales[0] + 1.6 * self.sc_deltas[0] - self.scales[0] *
-                self.extrema[1][0],
-                        self.extrema[0][0] * self.scales[0] + 0.4 * self.sc_deltas[0] - self.scales[0] *
-                self.extrema[1][0],
+            self.extrema[0][0] * self.scales[0] + 1.6 * self.sc_deltas[0] - self.scales[0] *
+            self.extrema[1][0],
+            self.extrema[0][0] * self.scales[0] + 0.4 * self.sc_deltas[0] - self.scales[0] *
+            self.extrema[1][0],
             13)):
             if i % 2 == 1:
                 posXTics.append([self.extrema[0][1] * self.scales[1] + 0.35 * self.sc_deltas[1] - self.scales[1] *
@@ -667,10 +689,10 @@ class _PgSurfacePlotAnimation(PgAnimation):
                                  self.extrema[1][2]
                                  ])
         for i, y in enumerate(np.linspace(
-                        self.extrema[0][1] * self.scales[1] + 0.4 * self.sc_deltas[1] - self.scales[1] *
-                self.extrema[1][1],
-                        self.extrema[0][1] * self.scales[1] + 1.6 * self.sc_deltas[1] - self.scales[1] *
-                self.extrema[1][1],
+            self.extrema[0][1] * self.scales[1] + 0.4 * self.sc_deltas[1] - self.scales[1] *
+            self.extrema[1][1],
+            self.extrema[0][1] * self.scales[1] + 1.6 * self.sc_deltas[1] - self.scales[1] *
+            self.extrema[1][1],
             13)):
             if i % 2 == 1:
                 posYTics.append([y,
@@ -680,9 +702,9 @@ class _PgSurfacePlotAnimation(PgAnimation):
                                  self.extrema[1][2]])
         for i, z in enumerate(
             np.linspace(self.extrema[0][2] * self.scales[2] + 0.4 * self.sc_deltas[2] - self.scales[2] *
-                self.extrema[1][2],
+                        self.extrema[1][2],
                         self.extrema[0][2] * self.scales[2] + 1.6 * self.sc_deltas[2] - self.scales[2] *
-                            self.extrema[1][2],
+                        self.extrema[1][2],
                         13)):
             if i % 2 == 1:
                 posZTics.append([self.extrema[0][0] * self.scales[0] + 1.6 * self.sc_deltas[0] - self.scales[0] *
@@ -739,6 +761,113 @@ class _PgSurfacePlotAnimation(PgAnimation):
             item.setData(z=z_data, colors=mapped_colors)
 
 
+class _PgPipePlotAnimation(PgAnimation):
+    def __init__(self, **kwargs):
+        PgAnimation.__init__(self, **kwargs)
+
+        self.yAxis = [np.linspace(0, 1, 11)]
+
+        self.xAxis = [np.atleast_1d(data_set.input_data[1]) for data_set in self._data]
+        self.state_data = [data_set.output_data for data_set in self._data]
+
+        xAxis_min = np.min([np.min(data) for data in self.xAxis])
+        xAxis_max = np.max([np.max(data) for data in self.xAxis])
+        yAxis_min = np.min([np.min(data) for data in self.yAxis])
+        yAxis_max = np.max([np.max(data) for data in self.yAxis])
+
+        state_min = np.min([np.min(data) for data in self.state_data])
+        state_max = np.max([np.max(data) for data in self.state_data])
+
+        # calculate minima and maxima
+        self.extrema = np.array([[xAxis_min, yAxis_min, state_min],
+                                 [xAxis_max, yAxis_max, state_max]])
+
+        self.deltas = np.diff(self.extrema, axis=0).squeeze()
+
+        # scale all axes uniformly if no scales are given
+        _scales = []
+        for value in self.deltas:
+            if np.isclose(value, 0):
+                _scales.append(1)
+            else:
+                _scales.append(1 / value)
+        self.scales = np.array(_scales)
+
+        # setup color map
+        norm = mpl.colors.Normalize(vmin=self.extrema[0, -1],
+                                    vmax=self.extrema[1, -1])
+        self.mapping = cm.ScalarMappable(norm, self.colorMap)
+
+        # add plots
+        self.plot_items = []
+        for idx, data_set in enumerate(self._data):
+            ys = np.ones((len(self.xAxis[0]), len(self.yAxis[0]))) * self._data[idx].output_data[0]
+            y0 = np.ones((len(self.xAxis[0]), len(self.yAxis[0]))) * self._data[idx].output_data[0]
+
+            plot_item = gl.GLSurfacePlotItem(x=self.scales[0] * np.atleast_1d(self._data[idx].input_data[1]),
+                                             y=self.scales[1] * np.flipud(np.atleast_1d(self.yAxis[0])),
+                                             z=self.scales[2] * y0.T,
+                                             colors=self.mapping.to_rgba(ys),
+                                             computeNormals=False)
+
+            self.plotWidget.addItem(plot_item)
+            self.plot_items.append(plot_item)
+
+        # colorbar
+        self.colorBar.setCBRange(self.extrema[0, -1], self.extrema[1, -1])
+
+        self.sc_deltas = self.deltas * self.scales
+
+        # set origin (zoom point) to the middle of the figure
+        # (a better way would be to realize it directly via a method of
+        # self.plotWidget, instead to shift all items)
+        [item.translate(-self.scales[0] * self.extrema[1][0] + self.sc_deltas[0] / 2,
+                        -self.scales[1] * self.extrema[1][1] + self.sc_deltas[1] / 2,
+                        0)
+         for item in self.plotWidget.items]
+
+        self.plotWidget.setCameraPosition(elevation=90, azimuth=180)
+
+    def updatePlot(self):
+        """
+        Update the rendering
+        """
+        for idx, item in enumerate(self.plot_items):
+            # find nearest time index (0th order interpolation)
+            t_idx = (np.abs(self.time_data[idx] - self._t)).argmin()
+
+            # update data
+            self.slider.textLabelCurrent.setText(str(self._t))
+            self.slider.slider.setValue(self._t)
+            ys = np.ones((len(self.xAxis[0]), len(self.yAxis[0]))) * self._data[idx].output_data[t_idx]
+            y0 = np.zeros((len(self.xAxis[0]), len(self.yAxis[0]))) * self._data[idx].output_data[t_idx]
+            z_data = self.scales[2] * y0
+            mapped_colors = self.mapping.to_rgba(ys)
+            item.setData(z=z_data, colors=mapped_colors)
+
+        self._t += self._t_step
+
+        if self._t > self._end_time:
+            self._t = self._start_time
+
+    def movePlot(self):
+        """
+        Update the rendering by user
+        """
+        self._t = self.slider.slider.value()
+        self.slider.textLabelCurrent.setText(str(self._t))
+        for idx, item in enumerate(self.plot_items):
+            # find nearest time index (0th order interpolation)
+            t_idx = (np.abs(self.time_data[idx] - self._t)).argmin()
+
+            # update data
+            ys = np.ones((len(self.xAxis[0]), len(self.yAxis[0]))) * self._data[idx].output_data[t_idx]
+            y0 = np.zeros((len(self.xAxis[0]), len(self.yAxis[0]))) * self._data[idx].output_data[t_idx]
+            z_data = self.scales[2] * y0
+            mapped_colors = self.mapping.to_rgba(ys)
+            item.setData(z=z_data, colors=mapped_colors)
+
+
 class Pg2DPlot(object):
     def __new__(self, **kwargs):
         animationAxis = kwargs.get('animationAxis', None)
@@ -746,6 +875,11 @@ class Pg2DPlot(object):
             return _Pg2DPlotAnimation(**dict(kwargs, plotType='2D-Animation'))
         else:
             return _Pg2DPlot(**dict(kwargs, plotType='2D'))
+
+
+class PgPipePlot(object):
+    def __new__(self, **kwargs):
+        return _PgPipePlotAnimation(**dict(kwargs, plotType='2D-PipeAnimation'))
 
 
 class _Pg2DPlot(PgDataPlot):
@@ -952,15 +1086,15 @@ class PgAdvancedViewWidget(gl.GLViewWidget):
     OpenGL Widget that depends on GLViewWidget and completes it with text labels for the x, y and z axis
     """
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         super(PgAdvancedViewWidget, self).__init__()
-        self.xlabel = 'x'
+        self.xlabel = kwargs.get('x', 'x')
         self.posXLabel = [1, 0, 0]
 
-        self.ylabel = 'y'
+        self.ylabel = kwargs.get('y', 'y')
         self.posYLabel = [0, 1, 0]
 
-        self.zlabel = 'z'
+        self.zlabel = kwargs.get('z', 'z')
         self.posZLabel = [0, 0, 1]
         self.oldPosZLabel = cp.copy(self.posZLabel)
 
@@ -1119,6 +1253,7 @@ class PgColorBarWidget(pg.GraphicsLayoutWidget):
     """
     OpenGL Widget that depends on GraphicsLayoutWidget and realizes an axis and a color bar
     """
+
     def __init__(self, colorMap):
         super(PgColorBarWidget, self).__init__()
 
