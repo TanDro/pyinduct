@@ -185,8 +185,6 @@ class PgDataPlot(DataPlot, pg.QtCore.QObject):
             self.generate3DWindow()
         elif plotType == '2D-Animation':
             self.generate2DAnimaionWindow()
-        elif plotType == '2D-PipeAnimation-2':
-            self.generate2DPipeAnimationWindow()
         elif plotType == '2D-PipeAnimation':
             self.generatePipeAnimationWindow()
         elif plotType == '3D-Animation':
@@ -229,23 +227,6 @@ class PgDataPlot(DataPlot, pg.QtCore.QObject):
         self.slider = AdSlider()
         layout.addWidget(self.plotWidget, 0, 0)
         layout.addWidget(self.slider, 1, 0)
-        layout.setHorizontalSpacing(0)
-        self.w = pg.QtGui.QWidget()
-        self.w.resize(self.windowWidth, self.windowHeight)
-        self.w.setLayout(layout)
-        self.w.show()
-
-    def generate2DPipeAnimationWindow(self):
-        layout = pg.QtGui.QGridLayout()
-        self.plotWidget = pg.PlotWidget()
-        self.plotWidget.sizeHint = lambda: pg.QtCore.QSize(self.windowWidth, self.windowHeight)
-        self.colorBar = PgColorBarWidget(self.colorMap)
-        self.plotWidget.setSizePolicy(self.colorBar.sizePolicy())
-        self.slider = AdSlider()
-        layout.addWidget(self.plotWidget, 0, 0)
-        layout.addWidget(self.colorBar, 0, 1)
-        layout.addWidget(self.slider, 1, 0)
-        self.colorBar.sizeHint = lambda: pg.QtCore.QSize(self.colorbarWidth, self.windowHeight)
         layout.setHorizontalSpacing(0)
         self.w = pg.QtGui.QWidget()
         self.w.resize(self.windowWidth, self.windowHeight)
@@ -877,126 +858,11 @@ class _Pg2DPlotAnimation(PgAnimation):
             self._plot_data_items[idx].setData(x=self.spatial_data[idx], y=_interpolData)
 
 
-
-class Pg2DPipeAnimation(PgAnimation):
-    def __init__(self, **kwargs):
-        # initialize parent classes
-        PgAnimation.__init__(self, **kwargs)
-
-        #
-        self.spatial_data = [np.atleast_1d(data_set.input_data[1]) for data_set in self._data]
-        self.state_data = [data_set.output_data for data_set in self._data]
-
-        # set range of the horizontal axis
-        spat_min = np.min([np.min(data) for data in self.spatial_data])
-        spat_max = np.max([np.max(data) for data in self.spatial_data])
-        self.plotWidget.setXRange(spat_min, spat_max)
-
-        # get min/max temperature
-        state_min = np.min([np.min(data) for data in self.state_data])
-        state_max = np.max([np.max(data) for data in self.state_data])
-
-        # set range of the vertical axis
-        di = kwargs.get("di", 0.05)
-        do = kwargs.get("do", 0.55)
-        self.plotWidget.setYRange(0, do)
-
-        # setup color map
-        norm = mpl.colors.Normalize(vmin=state_min,
-                                    vmax=state_max)
-        self.mapping = cm.ScalarMappable(norm, self.colorMap)
-
-        # set range of colorbar: [0, 1] --> [Tmin, Tmax]
-        self.colorBar.setCBRange(state_min, state_max)
-
-        # hide axis
-        self.plotWidget.showAxis(axis="left", show=False)
-        self.plotWidget.showAxis(axis="bottom", show=False)
-
-        # define colormap
-        colorMap = cm.get_cmap(self.colorMap)
-
-        # define the contour of the pipe
-        bottomX = np.linspace(start=spat_min, stop=spat_max, num=2)
-        bottomY = np.ones(2) * 0
-        topX = np.linspace(start=spat_min, stop=spat_max, num=2)
-        topY = np.ones(2) * di
-        leftX = np.ones(2) * spat_min
-        leftY = np.linspace(start=0, stop=di, num=2)
-        rightX = np.ones(2) * spat_max
-        rightY = np.linspace(start=0, stop=di, num=2)
-
-        # display the pipe
-        self.plotWidget.addItem(pg.PlotDataItem(x=bottomX, y=bottomY, pen=pg.mkPen(color='w', width=2)))
-        self.plotWidget.addItem(pg.PlotDataItem(x=topX, y=topY, pen=pg.mkPen(color='w', width=2)))
-        self.plotWidget.addItem(pg.PlotDataItem(x=leftX, y=leftY, pen=pg.mkPen(color='w', width=2)))
-        self.plotWidget.addItem(pg.PlotDataItem(x=rightX, y=rightY, pen=pg.mkPen(color='w', width=2)))
-
-        # setup color map
-        norm = mpl.colors.Normalize(vmin=state_min,
-                                    vmax=state_max)
-        self.mapping = cm.ScalarMappable(norm, self.colorMap)
-        colors = self.mapping.to_rgba(self._data[0].output_data)
-
-        self._plot_data_items = []
-        for idx, item in enumerate(self._data):
-            for _, idy in enumerate(np.linspace(0, 0.05, 200)):
-                x = self.spatial_data[idx]
-                y = np.ones(len(x)) * idy
-                currentColour = self.mapping.to_rgba(item.output_data)
-                self._plot_data_items.append(pg.PlotDataItem(x=x, y=y, pen=pg.mkPen(color=colorMap(idx / len(self._data), bytes=True),
-                                                                          width=2)))
-                self.plotWidget.addItem(self._plot_data_items[-1])
-
-
-    def updatePlot(self):
-        """
-        Update the rendering
-        """
-        for idx, item in enumerate(self._data):
-            for _, idy in enumerate(np.linspace(0, 0.05, 100)):
-                x = self.spatial_data[idx]
-                y = np.ones(len(x)) * idy
-
-                axis = [[self._t], self.spatial_data[idx]]
-                _interpolData = item._interpolator(*axis)[0]
-
-                # update data
-                self.slider.textLabelCurrent.setText(str(self._t))
-                self.slider.slider.setValue(self._t)
-                self._plot_data_items[idx].setData(x=x, y=y)
-
-        self._t += self._t_step
-
-        if self._t > self._end_time:
-            self._t = self._start_time
-
-
-    def movePlot(self):
-        """
-        Update the rendering by User
-        """
-        self._t = self.slider.slider.value()
-        self.slider.textLabelCurrent.setText(str(self._t))
-        for idx, item in enumerate(self._data):
-            for _, idy in enumerate(np.linspace(0, 0.05, 100)):
-                x = self.spatial_data[idx]
-                y = np.ones(len(x)) * idy
-
-                axis = [[self._t], self.spatial_data[idx]]
-                _interpolData = item._interpolator(*axis)[0]
-
-                # update data
-                self._plot_data_items[idx].setData(x=x, y=y)
-
-
 class _PgPipePlotAnimation(PgAnimation):
     def __init__(self, **kwargs):
         PgAnimation.__init__(self, **kwargs)
 
-        # get diameter of pipe
-        di = kwargs.get('di', '0.050')
-        do = kwargs.get('do', '0.055')
+        # data = [edTmFDM, edTwFDM]
 
         # add one additional data-item
         newRow = self._data[1].output_data.shape[0]
@@ -1004,12 +870,9 @@ class _PgPipePlotAnimation(PgAnimation):
         newDataArray = np.ones((newRow, newCol))
         newDataArray[:, 0: -1] = self._data[1].output_data
         newDataArray[:, -1] = newDataArray[:, -2]
-        self._data[1].output_data = newDataArray - 8  # just for demonstration
+        self._data[1].output_data = newDataArray
 
-        self.doAxis = [np.linspace(0, do, 11)]
-        self.diAxis = [np.linspace(0, di, 11)]
-
-        self.yAxis = [np.linspace(0, 10, 11)]
+        self.yAxis = [np.linspace(0, 1, 11)]
 
         self.xAxis = [np.atleast_1d(data_set.input_data[1]) for data_set in self._data]
         self.state_data = [data_set.output_data for data_set in self._data]
@@ -1026,6 +889,7 @@ class _PgPipePlotAnimation(PgAnimation):
         self.extrema = np.array([[xAxis_min, yAxis_min, state_min],
                                  [xAxis_max, yAxis_max, state_max]])
 
+        # calculate the difference of each column between the second and the first row
         self.deltas = np.diff(self.extrema, axis=0).squeeze()
 
         # scale all axes uniformly if no scales are given
@@ -1042,22 +906,23 @@ class _PgPipePlotAnimation(PgAnimation):
                                     vmax=self.extrema[1, -1])
         self.mapping = cm.ScalarMappable(norm, self.colorMap)
 
-        #
-        self.plotPipeContour()
+        # set inner and outer diameter
+        self.pipeDo = 0.3 * self._data[0].input_data[1]._values[-1]  # (outerDiameter / pipeLength) = 0.055 / 0.435 = 0.3
+        self.pipeDi = 0.23 * self._data[0].input_data[1]._values[-1]  # (innerDiameter / pipeLength) = 0.050 / 0.435 = 0.3
 
         # add color plot
         self.plot_items = []
         for idx, data_set in enumerate([self._data[0]]):
-            ys = np.ones((len(self.xAxis[0]), len(self.doAxis[0]))) * self._data[idx].output_data[0]
-            y0 = np.ones((len(self.xAxis[0]), len(self.doAxis[0]))) * self._data[idx].output_data[0]
+            ys = np.ones((len(self.xAxis[0]), len(self.yAxis[0]))) * self._data[idx].output_data[0]
+            y0 = np.ones((len(self.xAxis[0]), len(self.yAxis[0]))) * self._data[idx].output_data[0]
 
             ys[[0, 1, -2, -1], :] = self._data[1].output_data[0]
             y0[[0, 1, -2, -1], :] = self._data[1].output_data[0]
 
 
             # y0.T := numpy.ndarray.T := transpose matrix/vector
-            plot_item = gl.GLSurfacePlotItem(x=self.scales[0] * 0.05 * np.atleast_1d(self._data[idx].input_data[1]),
-                                             y=self.scales[1] * 0.1 * np.atleast_1d(self.yAxis[0]),
+            plot_item = gl.GLSurfacePlotItem(x=self.scales[0] * self.pipeDo * np.atleast_1d(self._data[idx].input_data[1]),
+                                             y=self.scales[1] * np.atleast_1d(self.yAxis[0]),
                                              z=self.scales[2] * y0.T,
                                              colors=self.mapping.to_rgba(ys),
                                              computeNormals=False)
@@ -1070,48 +935,46 @@ class _PgPipePlotAnimation(PgAnimation):
 
         self.sc_deltas = self.deltas * self.scales
 
+        # plot contour of the pipe
+        self._plotPipeContour()
+
         # set origin (zoom point) to the middle of the figure
         # (a better way would be to realize it directly via a method of
         # self.plotWidget, instead to shift all items)
-        [item.translate(-self.scales[0] * self.extrema[1][0] + self.sc_deltas[0] / 2,
-                        -self.scales[1] * self.extrema[1][1] + self.sc_deltas[1] / 2,
+        [item.translate(-self.scales[0] * self.extrema[1][0] + self.sc_deltas[0],
+                        -self.scales[1] * self.extrema[1][1] + self.sc_deltas[1],
                         0)
          for item in self.plotWidget.items]
 
-        self.plotWidget.setCameraPosition(elevation=90, azimuth=180)
+        # !! Argument 'pos' funktioniert nicht
+        self.plotWidget.setCameraPosition(elevation=90, azimuth=180, distance=2)
 
-    def plotPipeContour(self):
+    def _plotPipeContour(self):
 
         # set up matrix which contains the vertices for the contour of the pipe
         pipeContourVertex = np.ones((5, 3))
         pipeInnerContourVertex = np.ones((4, 3))
 
-        # additional constants
-        xAxis_min = self.extrema[0, 0]
-        xAxis_max = self.extrema[1, 0]
 
-        # define vertices
-        pipeContourVertex[0, :] = [self.doAxis[0][0], xAxis_min, 0]
-        pipeContourVertex[1, :] = [self.doAxis[0][0], xAxis_max, 0]
-        pipeContourVertex[2, :] = [self.doAxis[0][-1], xAxis_max, 0]
-        pipeContourVertex[3, :] = [self.doAxis[0][-1], xAxis_min, 0]
+        # define vertices of the contour
+        pipeContourVertex[0, :] = [0, 0, 0]
+        pipeContourVertex[1, :] = [0, 1, 0]
+        pipeContourVertex[2, :] = [self.pipeDo, 1, 0]
+        pipeContourVertex[3, :] = [self.pipeDo, 0, 0]
         pipeContourVertex[4, :] = pipeContourVertex[0, :]
 
-        # define
-        pipeInnerContourVertex[0, :] = [self.doAxis[0][-1]/2 - self.diAxis[0][-1]/2,
-                                   xAxis_min, 0]
-        pipeInnerContourVertex[1, :] = [self.doAxis[0][-1] / 2 - self.diAxis[0][-1] / 2,
-                                   xAxis_max, 0]
-        pipeInnerContourVertex[2, :] = [self.doAxis[0][-1] / 2 + self.diAxis[0][-1] / 2,
-                                        xAxis_max, 0]
-        pipeInnerContourVertex[3, :] = [self.doAxis[0][-1] / 2 + self.diAxis[0][-1] / 2,
-                                        xAxis_min, 0]
+        # define inner vertex to draw the wall
+        pipeInnerContourVertex[0, :] = [self.pipeDo / 2 - self.pipeDi / 2, 0, 0]
+        pipeInnerContourVertex[1, :] = [self.pipeDo / 2 - self.pipeDi / 2, 1, 0]
+        pipeInnerContourVertex[2, :] = [self.pipeDo / 2 + self.pipeDi / 2, 1, 0]
+        pipeInnerContourVertex[3, :] = [self.pipeDo / 2 + self.pipeDi / 2, 0, 0]
 
-
-        self.pipeContour = gl.GLLinePlotItem(pos=pipeContourVertex, mode="line_strip")
+        # add the outer contour to the PlotWidget-Object
+        self.pipeContour = gl.GLLinePlotItem(pos=pipeContourVertex, mode="line_strip", width=2)
         self.plotWidget.addItem(self.pipeContour)
 
-        self.pipeInnerContour = gl.GLLinePlotItem(pos=pipeInnerContourVertex, mode="lines")
+        # add the inner contour to the Plot-Widget-Object
+        self.pipeInnerContour = gl.GLLinePlotItem(pos=pipeInnerContourVertex, mode="lines", width=2)
         self.plotWidget.addItem(self.pipeInnerContour)
 
     def updatePlot(self):
@@ -1125,14 +988,13 @@ class _PgPipePlotAnimation(PgAnimation):
             # update data
             self.slider.textLabelCurrent.setText(str(self._t))
             self.slider.slider.setValue(self._t)
-            ys = np.ones((len(self.xAxis[0]), len(self.doAxis[0]))) * self._data[idx].output_data[t_idx]
-            y0 = np.zeros((len(self.xAxis[0]), len(self.doAxis[0]))) * self._data[idx].output_data[t_idx]
+            ys = np.ones((len(self.xAxis[0]), len(self.yAxis[0]))) * self._data[idx].output_data[t_idx]
+            y0 = np.zeros((len(self.xAxis[0]), len(self.yAxis[0])))
 
             ys[[0, 1, -2, -1], :] = self._data[idx + 1].output_data[t_idx]
 
-            z_data = self.scales[2] * y0
             mapped_colors = self.mapping.to_rgba(ys)
-            item.setData(z=z_data, colors=mapped_colors)
+            item.setData(z=y0, colors=mapped_colors)
 
         self._t += self._t_step
 
@@ -1150,16 +1012,13 @@ class _PgPipePlotAnimation(PgAnimation):
             t_idx = (np.abs(self.time_data[idx] - self._t)).argmin()
 
             # update data
-            ys = np.ones((len(self.xAxis[0]), len(self.doAxis[0]))) * self._data[idx].output_data[t_idx]
-            y0 = np.zeros((len(self.xAxis[0]), len(self.doAxis[0]))) * self._data[idx].output_data[t_idx]
+            ys = np.ones((len(self.xAxis[0]), len(self.yAxis[0]))) * self._data[idx].output_data[t_idx]
+            y0 = np.zeros((len(self.xAxis[0]), len(self.yAxis[0])))
 
             ys[[0, 1, -2, -1], :] = self._data[idx + 1].output_data[t_idx]
 
-            z_data = self.scales[2] * y0
             mapped_colors = self.mapping.to_rgba(ys)
-            item.setData(z=z_data, colors=mapped_colors)
-
-
+            item.setData(z=y0, colors=mapped_colors)
 
 
 class PgPipePlot(object):
