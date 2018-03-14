@@ -190,7 +190,7 @@ class PgDataPlot(DataPlot, pg.QtCore.QObject):
         elif plotType == '3D-Animation':
             self.generate3DAnimaionWindow()
         else:
-            raise ValueErrorPlot
+            raise ValueError
 
     def generate2DWindow(self):
         layout = pg.QtGui.QGridLayout()
@@ -421,7 +421,7 @@ class _PgSurfacePlot(PgDataPlot):
                                                  self._data[idx].input_data[1])),
                                              z=self.scales[2] * self._data[idx].output_data,
                                              colors=self.mapping.to_rgba(self._data[idx].output_data),
-                                             computeNormals=True)
+                                             computeNormals=False)
 
             self.plotWidget.addItem(plot_item)
             self.plot_items.append(plot_item)
@@ -485,10 +485,10 @@ class _PgSurfacePlot(PgDataPlot):
         posYTics = []
         posZTics = []
         for i, x in enumerate(np.linspace(
-                        self.extrema[0][0] * self.scales[0] + 1.6 * self.sc_deltas[0] - self.scales[0] *
-                self.extrema[1][0],
-                        self.extrema[0][0] * self.scales[0] + 0.4 * self.sc_deltas[0] - self.scales[0] *
-                self.extrema[1][0],
+            self.extrema[0][0] * self.scales[0] + 1.6 * self.sc_deltas[0] - self.scales[0] *
+            self.extrema[1][0],
+            self.extrema[0][0] * self.scales[0] + 0.4 * self.sc_deltas[0] - self.scales[0] *
+            self.extrema[1][0],
             13)):
             if i % 2 == 1:
                 posXTics.append([self.extrema[0][1] * self.scales[1] + 0.35 * self.sc_deltas[1] - self.scales[1] *
@@ -498,10 +498,10 @@ class _PgSurfacePlot(PgDataPlot):
                                  self.extrema[1][2]
                                  ])
         for i, y in enumerate(np.linspace(
-                        self.extrema[0][1] * self.scales[1] + 0.4 * self.sc_deltas[1] - self.scales[1] *
-                self.extrema[1][1],
-                        self.extrema[0][1] * self.scales[1] + 1.6 * self.sc_deltas[1] - self.scales[1] *
-                self.extrema[1][1],
+            self.extrema[0][1] * self.scales[1] + 0.4 * self.sc_deltas[1] - self.scales[1] *
+            self.extrema[1][1],
+            self.extrema[0][1] * self.scales[1] + 1.6 * self.sc_deltas[1] - self.scales[1] *
+            self.extrema[1][1],
             13)):
             if i % 2 == 1:
                 posYTics.append([y,
@@ -511,9 +511,9 @@ class _PgSurfacePlot(PgDataPlot):
                                  self.extrema[1][2]])
         for i, z in enumerate(
             np.linspace(self.extrema[0][2] * self.scales[2] + 0.4 * self.sc_deltas[2] - self.scales[2] *
-                self.extrema[1][2],
+                        self.extrema[1][2],
                         self.extrema[0][2] * self.scales[2] + 1.6 * self.sc_deltas[2] - self.scales[2] *
-                            self.extrema[1][2],
+                        self.extrema[1][2],
                         13)):
             if i % 2 == 1:
                 posZTics.append([self.extrema[0][0] * self.scales[0] + 1.6 * self.sc_deltas[0] - self.scales[0] *
@@ -676,10 +676,10 @@ class _PgSurfacePlotAnimation(PgAnimation):
         posYTics = []
         posZTics = []
         for i, x in enumerate(np.linspace(
-                        self.extrema[0][0] * self.scales[0] + 1.6 * self.sc_deltas[0] - self.scales[0] *
-                self.extrema[1][0],
-                        self.extrema[0][0] * self.scales[0] + 0.4 * self.sc_deltas[0] - self.scales[0] *
-                self.extrema[1][0],
+            self.extrema[0][0] * self.scales[0] + 1.6 * self.sc_deltas[0] - self.scales[0] *
+            self.extrema[1][0],
+            self.extrema[0][0] * self.scales[0] + 0.4 * self.sc_deltas[0] - self.scales[0] *
+            self.extrema[1][0],
             13)):
             if i % 2 == 1:
                 posXTics.append([self.extrema[0][1] * self.scales[1] + 0.35 * self.sc_deltas[1] - self.scales[1] *
@@ -689,10 +689,10 @@ class _PgSurfacePlotAnimation(PgAnimation):
                                  self.extrema[1][2]
                                  ])
         for i, y in enumerate(np.linspace(
-                        self.extrema[0][1] * self.scales[1] + 0.4 * self.sc_deltas[1] - self.scales[1] *
-                self.extrema[1][1],
-                        self.extrema[0][1] * self.scales[1] + 1.6 * self.sc_deltas[1] - self.scales[1] *
-                self.extrema[1][1],
+            self.extrema[0][1] * self.scales[1] + 0.4 * self.sc_deltas[1] - self.scales[1] *
+            self.extrema[1][1],
+            self.extrema[0][1] * self.scales[1] + 1.6 * self.sc_deltas[1] - self.scales[1] *
+            self.extrema[1][1],
             13)):
             if i % 2 == 1:
                 posYTics.append([y,
@@ -702,9 +702,9 @@ class _PgSurfacePlotAnimation(PgAnimation):
                                  self.extrema[1][2]])
         for i, z in enumerate(
             np.linspace(self.extrema[0][2] * self.scales[2] + 0.4 * self.sc_deltas[2] - self.scales[2] *
-                self.extrema[1][2],
+                        self.extrema[1][2],
                         self.extrema[0][2] * self.scales[2] + 1.6 * self.sc_deltas[2] - self.scales[2] *
-                            self.extrema[1][2],
+                        self.extrema[1][2],
                         13)):
             if i % 2 == 1:
                 posZTics.append([self.extrema[0][0] * self.scales[0] + 1.6 * self.sc_deltas[0] - self.scales[0] *
@@ -864,76 +864,66 @@ class _PgPipePlotAnimation(PgAnimation):
 
         # data = [edTmFDM, edTwFDM]
 
-        # add one additional data-item
-        newRow = self._data[1].output_data.shape[0]
-        newCol = self._data[0].output_data.shape[1]
-        newDataArray = np.ones((newRow, newCol))
-        newDataArray[:, 0: -1] = self._data[1].output_data
-        newDataArray[:, -1] = newDataArray[:, -2]
-        self._data[1].output_data = newDataArray
-
-        self.yAxis = [np.linspace(0, 1, 11)]
-
-        self.xAxis = [np.atleast_1d(data_set.input_data[1]) for data_set in self._data]
         self.state_data = [data_set.output_data for data_set in self._data]
-
-        xAxis_min = np.min([np.min(data) for data in self.xAxis])
-        xAxis_max = np.max([np.max(data) for data in self.xAxis])
-        yAxis_min = np.min([np.min(data) for data in self.yAxis])
-        yAxis_max = np.max([np.max(data) for data in self.yAxis])
-
         state_min = np.min([np.min(data) for data in self.state_data])
         state_max = np.max([np.max(data) for data in self.state_data])
 
         # calculate minima and maxima
-        self.extrema = np.array([[xAxis_min, yAxis_min, state_min],
-                                 [xAxis_max, yAxis_max, state_max]])
-
-        # calculate the difference of each column between the second and the first row
-        self.deltas = np.diff(self.extrema, axis=0).squeeze()
-
-        # scale all axes uniformly if no scales are given
-        _scales = []
-        for value in self.deltas:
-            if np.isclose(value, 0):
-                _scales.append(1)
-            else:
-                _scales.append(1 / value)
-        self.scales = np.array(_scales)
+        self.extrema = np.array([state_min, state_max])
 
         # setup color map
-        norm = mpl.colors.Normalize(vmin=self.extrema[0, -1],
-                                    vmax=self.extrema[1, -1])
+        norm = mpl.colors.Normalize(vmin=self.extrema[0],
+                                    vmax=self.extrema[-1])
         self.mapping = cm.ScalarMappable(norm, self.colorMap)
 
-        # set inner and outer diameter
-        self.pipeDo = 0.3 * self._data[0].input_data[1]._values[-1]  # (outerDiameter / pipeLength) = 0.055 / 0.435 = 0.3
-        self.pipeDi = 0.23 * self._data[0].input_data[1]._values[-1]  # (innerDiameter / pipeLength) = 0.050 / 0.435 = 0.3
+        # length of wall and pipe must be equal
+        self.pipeLength = 1.0
+        # scale
+        self.scalePipeLength = self.pipeLength / self._data[0].input_data[1][-1]
+        # inner diameter (medium) scale to 0.2
+        self.pipeDi = 0.2
+        self.pipeDiAxis = np.linspace(0, self.pipeDi, 11)
+        # outer diameter (wall) scale to 0.1
+        self.pipeDo = 0.1
+        self.pipeDoAxis = np.linspace(0, self.pipeDo, 11)
 
-        # add color plot
         self.plot_items = []
-        for idx, data_set in enumerate([self._data[0]]):
-            ys = np.ones((len(self.xAxis[0]), len(self.yAxis[0]))) * self._data[idx].output_data[0]
-            y0 = np.ones((len(self.xAxis[0]), len(self.yAxis[0]))) * self._data[idx].output_data[0]
+        # plot wall 1
+        ys = self._data[1].output_data[0] * np.ones((len(self.pipeDoAxis), len(self._data[1].input_data[1])))
+        self.z0Wall = np.zeros((len(self.pipeDoAxis), len(self._data[1].input_data[1])))
 
-            ys[[0, 1, -2, -1], :] = self._data[1].output_data[0]
-            y0[[0, 1, -2, -1], :] = self._data[1].output_data[0]
+        plot_item = gl.GLSurfacePlotItem(x=self.pipeDoAxis,
+                                         y=self.scalePipeLength * self._data[1].input_data[1],
+                                         z=self.z0Wall,
+                                         colors=self.mapping.to_rgba(ys),
+                                         computeNormals=False)
 
+        self.plotWidget.addItem(plot_item)
+        self.plot_items.append(plot_item)
+        # plot wall 2
+        plot_item = gl.GLSurfacePlotItem(x=self.pipeDoAxis + self.pipeDi + self.pipeDo,
+                                         y=self.scalePipeLength * self._data[1].input_data[1],
+                                         z=self.z0Wall,
+                                         colors=self.mapping.to_rgba(ys),
+                                         computeNormals=False)
 
-            # y0.T := numpy.ndarray.T := transpose matrix/vector
-            plot_item = gl.GLSurfacePlotItem(x=self.scales[0] * self.pipeDo * np.atleast_1d(self._data[idx].input_data[1]),
-                                             y=self.scales[1] * np.atleast_1d(self.yAxis[0]),
-                                             z=self.scales[2] * y0.T,
-                                             colors=self.mapping.to_rgba(ys),
-                                             computeNormals=False)
+        self.plotWidget.addItem(plot_item)
+        self.plot_items.append(plot_item)
 
-            self.plotWidget.addItem(plot_item)
-            self.plot_items.append(plot_item)
+        # plot medium
+        ys = self._data[0].output_data[0] * np.ones((len(self.pipeDiAxis), len(self._data[0].input_data[1])))
+        self.z0Medium = np.zeros((len(self.pipeDiAxis), len(self._data[0].input_data[1])))
+
+        plot_item = gl.GLSurfacePlotItem(x=self.pipeDiAxis + self.pipeDo,
+                                         y=self.scalePipeLength * self._data[0].input_data[1],
+                                         z=self.z0Medium,
+                                         colors=self.mapping.to_rgba(ys),
+                                         computeNormals=False)
+        self.plotWidget.addItem(plot_item)
+        self.plot_items.append(plot_item)
 
         # colorbar
-        self.colorBar.setCBRange(self.extrema[0, -1], self.extrema[1, -1])
-
-        self.sc_deltas = self.deltas * self.scales
+        self.colorBar.setCBRange(self.extrema[0], self.extrema[-1])
 
         # plot contour of the pipe
         self._plotPipeContour()
@@ -941,13 +931,12 @@ class _PgPipePlotAnimation(PgAnimation):
         # set origin (zoom point) to the middle of the figure
         # (a better way would be to realize it directly via a method of
         # self.plotWidget, instead to shift all items)
-        [item.translate(-self.scales[0] * self.extrema[1][0] + self.sc_deltas[0],
-                        -self.scales[1] * self.extrema[1][1] + self.sc_deltas[1],
+        [item.translate(-(self.pipeDi + self.pipeDo * 2) / 2,
+                        -self.pipeLength / 2,
                         0)
          for item in self.plotWidget.items]
 
-        # !! Argument 'pos' funktioniert nicht
-        self.plotWidget.setCameraPosition(elevation=90, azimuth=180, distance=2)
+        self.plotWidget.setCameraPosition(elevation=90, azimuth=0, distance=2)
 
     def _plotPipeContour(self):
 
@@ -955,19 +944,18 @@ class _PgPipePlotAnimation(PgAnimation):
         pipeContourVertex = np.ones((5, 3))
         pipeInnerContourVertex = np.ones((4, 3))
 
-
         # define vertices of the contour
         pipeContourVertex[0, :] = [0, 0, 0]
-        pipeContourVertex[1, :] = [0, 1, 0]
-        pipeContourVertex[2, :] = [self.pipeDo, 1, 0]
-        pipeContourVertex[3, :] = [self.pipeDo, 0, 0]
+        pipeContourVertex[1, :] = [0, self.pipeLength, 0]
+        pipeContourVertex[2, :] = [self.pipeDo + self.pipeDi + self.pipeDo, self.pipeLength, 0]
+        pipeContourVertex[3, :] = [self.pipeDo + self.pipeDi + self.pipeDo, 0, 0]
         pipeContourVertex[4, :] = pipeContourVertex[0, :]
 
         # define inner vertex to draw the wall
-        pipeInnerContourVertex[0, :] = [self.pipeDo / 2 - self.pipeDi / 2, 0, 0]
-        pipeInnerContourVertex[1, :] = [self.pipeDo / 2 - self.pipeDi / 2, 1, 0]
-        pipeInnerContourVertex[2, :] = [self.pipeDo / 2 + self.pipeDi / 2, 1, 0]
-        pipeInnerContourVertex[3, :] = [self.pipeDo / 2 + self.pipeDi / 2, 0, 0]
+        pipeInnerContourVertex[0, :] = [self.pipeDo, 0, 0]
+        pipeInnerContourVertex[1, :] = [self.pipeDo, self.pipeLength, 0]
+        pipeInnerContourVertex[2, :] = [self.pipeDo + self.pipeDi, self.pipeLength, 0]
+        pipeInnerContourVertex[3, :] = [self.pipeDo + self.pipeDi, 0, 0]
 
         # add the outer contour to the PlotWidget-Object
         self.pipeContour = gl.GLLinePlotItem(pos=pipeContourVertex, mode="line_strip", width=2)
@@ -981,20 +969,23 @@ class _PgPipePlotAnimation(PgAnimation):
         """
         Update the rendering
         """
-        for idx, item in enumerate(self.plot_items):
-            # find nearest time index (0th order interpolation)
-            t_idx = (np.abs(self.time_data[idx] - self._t)).argmin()
+        # find nearest time index (0th order interpolation)
+        t_idx = (np.abs(self.time_data[0] - self._t)).argmin()
 
-            # update data
-            self.slider.textLabelCurrent.setText(str(self._t))
-            self.slider.slider.setValue(self._t)
-            ys = np.ones((len(self.xAxis[0]), len(self.yAxis[0]))) * self._data[idx].output_data[t_idx]
-            y0 = np.zeros((len(self.xAxis[0]), len(self.yAxis[0])))
+        # update data
+        self.slider.textLabelCurrent.setText(str(self._t))
+        self.slider.slider.setValue(self._t)
 
-            ys[[0, 1, -2, -1], :] = self._data[idx + 1].output_data[t_idx]
+        # plot wall 1/2
+        ys = self._data[1].output_data[t_idx] * np.ones((len(self.pipeDoAxis), len(self._data[1].input_data[1])))
+        mapped_colors = self.mapping.to_rgba(ys)
+        self.plot_items[0].setData(z=self.z0Wall, colors=mapped_colors)
+        self.plot_items[1].setData(z=self.z0Wall, colors=mapped_colors)
 
-            mapped_colors = self.mapping.to_rgba(ys)
-            item.setData(z=y0, colors=mapped_colors)
+        # plot medium
+        ys = self._data[0].output_data[t_idx] * np.ones((len(self.pipeDiAxis), len(self._data[0].input_data[1])))
+        mapped_colors = self.mapping.to_rgba(ys)
+        self.plot_items[2].setData(z=self.z0Medium, colors=mapped_colors)
 
         self._t += self._t_step
 
@@ -1007,24 +998,23 @@ class _PgPipePlotAnimation(PgAnimation):
         """
         self._t = self.slider.slider.value()
         self.slider.textLabelCurrent.setText(str(self._t))
-        for idx, item in enumerate(self.plot_items):
-            # find nearest time index (0th order interpolation)
-            t_idx = (np.abs(self.time_data[idx] - self._t)).argmin()
+        t_idx = (np.abs(self.time_data[0] - self._t)).argmin()
 
-            # update data
-            ys = np.ones((len(self.xAxis[0]), len(self.yAxis[0]))) * self._data[idx].output_data[t_idx]
-            y0 = np.zeros((len(self.xAxis[0]), len(self.yAxis[0])))
+        # plot wall 1/2
+        ys = self._data[1].output_data[t_idx] * np.ones((len(self.pipeDoAxis), len(self._data[1].input_data[1])))
+        mapped_colors = self.mapping.to_rgba(ys)
+        self.plot_items[0].setData(z=self.z0Wall, colors=mapped_colors)
+        self.plot_items[1].setData(z=self.z0Wall, colors=mapped_colors)
 
-            ys[[0, 1, -2, -1], :] = self._data[idx + 1].output_data[t_idx]
-
-            mapped_colors = self.mapping.to_rgba(ys)
-            item.setData(z=y0, colors=mapped_colors)
+        # plot medium
+        ys = self._data[0].output_data[t_idx] * np.ones((len(self.pipeDiAxis), len(self._data[0].input_data[1])))
+        mapped_colors = self.mapping.to_rgba(ys)
+        self.plot_items[2].setData(z=self.z0Medium, colors=mapped_colors)
 
 
 class PgPipePlot(object):
     def __new__(self, **kwargs):
         return _PgPipePlotAnimation(**dict(kwargs, plotType='2D-PipeAnimation'))
-
 
 
 class PgGradientWidget(pg.GraphicsWidget):
@@ -1310,6 +1300,7 @@ class PgColorBarWidget(pg.GraphicsLayoutWidget):
     """
     OpenGL Widget that depends on GraphicsLayoutWidget and realizes an axis and a color bar
     """
+
     def __init__(self, colorMap):
         super(PgColorBarWidget, self).__init__()
 
