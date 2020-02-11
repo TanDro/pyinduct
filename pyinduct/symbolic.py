@@ -5,12 +5,15 @@ import sys
 from tqdm import tqdm
 import collections
 import pyinduct as pi
-from pyinduct.core import (domain_intersection, integrate_function,
+from pyinduct.core import (domain_intersection, integrate_function, get_base,
                            get_transformation_info, get_weight_transformation)
 from pyinduct.simulation import simulate_state_space, SimulationInput
 from sympy.utilities.lambdify import implemented_function
+from abc import ABC, abstractmethod
 
-__all__ = ["VariablePool"]
+
+__all__ = ["VariablePool", "NumericalCauchyIntegration",
+           "transform_to_diagonal_sys"]
 
 
 class VariablePool:
@@ -223,8 +226,8 @@ class Feedback(SimulationInput):
         if kwargs["weight_lbl"] not in self.feedback_gain_sum:
             self.feedback_gain_sum[kwargs["weight_lbl"]] = \
                 self.evaluate_feedback_gain_sum(self.feedback_gains,
-                                                kwargs["weight_lbl"],
-                                                (1, len(kwargs["weights"])))
+                                kwargs["weight_lbl"],
+                                (1, len(kwargs["weights"])))
 
         # linear feedback u = k^T * x
         res = self.feedback_gain_sum[kwargs["weight_lbl"]] @ kwargs["weights"]
@@ -289,7 +292,7 @@ class Feedback(SimulationInput):
 
 def simulate_system(rhs, funcs, init_conds, base_label, input_syms,
                     time_sym, temp_domain, settings=None):
-    """
+    r"""
     Simulate finite dimensional ode according to the provided
     right hand side (:code:`rhs`)
 
@@ -313,14 +316,9 @@ def simulate_system(rhs, funcs, init_conds, base_label, input_syms,
     Returns:
         See :py:func:`.simulate_state_space`.
     """
-    # argument for the dictionary by a pyinuct simulation input call
-    input_arg = input_syms[0].args[0]
-
-    # dictionary / kwargs for the pyinuct simulation input call
-    _input_arg = dict(time=0, weights=init_conds, weight_lbl=base_label)
-
     # check if all simulation input symbols have only one
     # depended variable and uniqueness of it
+    input_arg = input_syms[0].args[0]
     assert all([len(sym.args) == 1 for sym in input_syms])
     assert all([input_arg == sym.args[0] for sym in input_syms])
 
@@ -331,18 +329,19 @@ def simulate_system(rhs, funcs, init_conds, base_label, input_syms,
     # check if all inputs holds an SimulationInputWrapper as implementation
     assert all(isinstance(inp._imp_, SimulationInputWrapper) for inp in list(input_syms))
 
+    # dictionary / kwargs for the pyinuct simulation input call
+    _input_var = dict(time=0, weights=init_conds, weight_lbl=base_label)
+
     # derive callable from the symbolic expression of the right hand side
     print("\n>>> lambdify right hand side")
     rhs_lam = sp.lambdify((funcs, time_sym, input_arg), rhs, modules="numpy")
-
-    # check callback
-    assert len(rhs_lam(init_conds, 0, _input_arg)) == n
+    assert len(rhs_lam(init_conds, 0, _input_var)) == n
 
     def _rhs(_t, _q):
-        _input_arg["time"] = _t
-        _input_arg["weights"] = _q
+        _input_var["time"] = _t
+        _input_var["weights"] = _q
 
-        return rhs_lam(_q, _t, _input_arg)
+        return rhs_lam(_q, _t, _input_var)
 
     return simulate_state_space(_rhs, init_conds, temp_domain, settings)
 
@@ -404,15 +403,11 @@ def evaluate_integrals(expression):
     expr_expand = expression.expand()
 
     replace_dict = dict()
-    # print newline before progress
-    print()
-    for integral in tqdm(expr_expand.atoms(sp.Integral), file=sys.stdout,
-                         desc=">>> evaluate integrals"):
-
+    for integral in tqdm(expr_expand.atoms(sp.Integral),
+                         desc=">>> evaluate integrals", file=sys.stdout):
         if not len(integral.args[1]) == 3:
             raise ValueError(
                 "Only the evaluation of definite integrals is implemented.")
-
         integrand = integral.args[0]
         dependent_var, limit_a, limit_b = integral.args[1]
         all_funcs = integrand.atoms(sp.Function)
@@ -594,8 +589,8 @@ def implement_as_linear_ode(rhs, funcs, input_):
     B_num = np.array(B).astype(float)
 
     def __rhs(c, u):
-        # since u.dim = 3
-        return A_num @ c + B_num @ u[0]
+        assert u.shape[2] == 1
+        return A_num @ c + B_num @ u[:, :, 0]
 
     return new_dummy_variable((funcs, input_), __rhs)
 
@@ -610,3 +605,301 @@ def get_derivative_order(derivative):
     assert der_order == int(der_order)
 
     return int(der_order)
+
+
+class NumericalCauchyIntegration(ABC):
+    """
+    Class for a numerical integration of the cauchy problem
+
+    Usable for a system with two states.
+    """
+    def __init__(self, eta_traj, z0, zT, N):
+        """
+        Initialization of the class.
+
+        :param eta_traj: pyinduct.trajectory.SmoothTransition to plan a
+        transition between to static states
+        :param z0: beginning point of the integration (mostly = 0)
+        :param zT: end point of the integration (mostly = length)
+        :param N: number of integration points
+        """
+        # initialize the ABC class
+        super().__init__()
+        # initialize variables
+        self.N = N
+        self.dz = np.float64(np.abs(zT - z0)/N)
+        self.eta_traj = eta_traj
+        self.z0 = z0
+        self.zT = zT
+        self.dt = 0
+        self.k = 0
+        self.T0 = 0
+        self.T1 = 0
+        self.ti = 0
+        self.tf = 0
+        self.dT = 0
+        self.time = [0, 0]
+        self.space = [0, 0]
+
+    @abstractmethod
+    def _lmda(self, i, z=None):
+        """
+        Eigenvalue function of the transformed system.
+
+        :param i: use first or second eigenvalue
+        :param z: if lambda is a function of z, it will evaluated
+        :return: a numerical value at the position z or constant if z=None
+        """
+        pass
+
+    @abstractmethod
+    def _char(self, i, t0, z0, z):
+        """
+        Evaluate the characteristic of the system.
+
+        :param i: use first or second characteristic
+        :param t0: start point in time
+        :param z0: start point of the char in z
+        :param z: end point of the char in z
+        :return: return a numerical value for the evaluated char at z
+        """
+        pass
+
+    @abstractmethod
+    def _mat_C(self, z=None):
+        r"""
+        Matrix of the remaining part of the system.
+
+        .. math::
+            \frac{\partial \pmb{x}(z, t)}{\partial z} + \Lambda(z)
+            \frac{\partial \pmb{x}(z, t)}{\partial t} = C(z) \pmb{x}(z, t)
+
+        :param z: point where the matrix should get evaluated
+        :return: numpy array with 2x2 dimension
+        """
+        pass
+
+    @abstractmethod
+    def _mat_T(self, z=None):
+        """
+        Matrix of the transformation into the new states.
+
+        :param z: point where the matrix should get evaluated
+        :return: numpy array with 2x2 dimension
+        """
+        pass
+
+    @abstractmethod
+    def _mat_Tinv(self, z=None):
+        """
+        Matrix of the inverse transformation into the original states.
+
+        :param z: point where the matrix should get evaluated
+        :return: numpy array with 2x2 dimension
+        """
+        pass
+
+    def _qvec(self, zeta1, zeta2, z=None):
+        r"""
+        Vector for the calculation of next zeta point (like lambda for tau).
+
+        It's defined over the remaining part on the right side of the transformed system, with:
+
+        .. math::
+            \pmb{q}(z) = C(z)\pmb{x}(z, t)
+
+        .. math::
+            \frac{\partial \pmb{x}(z, t)}{\partial z} + \Lambda(z)
+            \frac{\partial \pmb{x}(z, t)}{\partial t} = C(z) \pmb{x}(z, t)
+
+        :param zeta1: first state of current point
+        :param zeta2: second state of current point
+        :param z: point on which the matrix multiplication should take place
+        :return: the results for both states
+        """
+        if not isinstance(zeta1, np.ndarray):
+            raise NotImplementedError(
+                "zeta1 should be a state vector over a time transition")
+        if not isinstance(zeta2, np.ndarray):
+            raise NotImplementedError(
+                "zeta2 should be a state vector over a time transition")
+        if len(zeta1) != len(zeta2):
+            raise NotImplementedError(
+                "zeta1 and zeta2 need to have the same dimension")
+        zeta = np.vstack((zeta1, zeta2))
+        matC = self._mat_C(z)
+        q1 = np.zeros(len(zeta1))
+        q2 = np.zeros(len(zeta2))
+        for i in range(len(zeta1)):
+            qvec = np.inner(matC, zeta[:, i])
+            q1[i] = qvec[0]
+            q2[i] = qvec[1]
+        return q1, q2
+
+    def get_Dt(self, T):
+        """
+        Calculation of necessary time steps.
+
+        The number of points get calculated by the number of dividing points in
+        the z axis.
+
+        :param T: length of whole interval
+        :return: dt time interval between points,
+                 k number of all points
+        """
+        self.k = 2*self.N
+        self.dt = T/self.k
+        return self.dt, self.k
+
+    def get_times(self):
+        """
+        Calculate the beginning and end time of the trajectory of the flat output.
+
+        :return: begin-, endtime and the difference of the transistion time
+        """
+        self.ti = self._char(1, self.eta_traj.t0, self.z0, self.zT)
+        self.tf = self._char(2, self.eta_traj.t1, self.z0, self.zT)
+        self.T0 = 2 * self.ti - self.eta_traj.t0
+        self.T1 = 2 * self.tf - self.eta_traj.t1
+        self.dT = self.T1 - self.T0
+        return self.T0, self.T1, self.dT, self.ti, self.tf
+
+    def get_timeandspace(self):
+        """
+        Calculate the points of the z- and t-axis of the system.
+
+        :return: time and space point arrays
+        """
+        self.get_Dt(self.dT)
+        # create time and space axis
+        self.time = np.linspace(self.T0, self.T1, self.k + 1)
+        self.space = np.linspace(self.z0, self.zT, self.N+1)
+        return self.time, self.space
+
+    def transform(self, x1, x2, z=None):
+        """
+        Transformation of the system into the hyperbolic normal form.
+
+        :param x1: input vector for the state x1
+        :param x2: input vector for the state x2
+        :param z: point z for which the transformation matrices should be evaluated
+        :return: return two transformed state vectors
+        """
+        tmp = np.inner(self._mat_T(z), np.array([[x1], [x2]]).T)
+        v1 = np.reshape(tmp[0, :], (len(x1)))
+        v2 = np.reshape(tmp[1, :], (len(x2)))
+        return v1, v2
+
+    def transform_inv(self, v1, v2, z=None):
+        """
+        Inverse transformation of the transformed states into the original states.
+
+        :param v1: input vector for the transformed state v1
+        :param v2: input vector for the transformed state v2
+        :param z: point z for which the transformation matrices should be evaluated
+        :return: return the two original state vectors
+        """
+        tmp = np.inner(self._mat_Tinv(z), np.array([[v1], [v2]]).T)
+        x1 = np.reshape(tmp[0, :], (len(v1)))
+        x2 = np.reshape(tmp[1, :], (len(v2)))
+        return x1, x2
+
+    def integrate_solution(self, x1_z0, x2_z0):
+        """
+        Integration algorithm to calculate the integrated solution of the cauchy
+        problem.
+
+        :param x1_z0: first state transition on ground of the flat output
+        :param x2_z0: second state transition on ground of the flat output
+        :return: the array of the integrated transition of both states
+        """
+        dim = [len(self.space), len(self.time)]
+        N = len(self.space)
+        zeta1 = np.zeros(dim)
+        zeta1[0, :] = np.copy(x1_z0)
+        zeta2 = np.zeros(dim)
+        zeta2[0, :] = np.copy(x2_z0)
+        tau1_bar = np.zeros(dim)
+        tau1_bar[0, :] = np.copy(self.time)
+        tau2_bar = np.zeros(dim)
+        tau2_bar[0, :] = np.copy(self.time)
+        zeta1_bar = np.zeros(dim)
+        zeta2_bar = np.zeros(dim)
+        for j, z in enumerate(tqdm(self.space, file=sys.stdout,
+                              desc=">>> integrate cauchy problem")):
+            if j+1 == N:
+                break
+            # calculate time shifts over the characteristics
+            tau1_bar[j+1, :] = self.time + self.dz*self._lmda(1, z)
+            tau2_bar[j+1, :] = self.time + self.dz*self._lmda(2, z)
+            # calculate the new estimated states
+            q1, q2 = self._qvec(zeta1[j, :], zeta2[j, :], z)
+            zeta1_bar[j+1, :] = zeta1[j, :] + self.dz*q1[:]
+            zeta2_bar[j+1, :] = zeta2[j, :] + self.dz*q2[:]
+            # interpolate the next state within the estimated time and place
+            zeta1[j+1, :] = np.interp(self.time, tau1_bar[j+1, :],
+                                      zeta1_bar[j+1, :])
+            zeta2[j+1, :] = np.interp(self.time, tau2_bar[j+1, :],
+                                      zeta2_bar[j+1, :])
+        return [zeta1, zeta2]
+
+
+def transform_to_diagonal_sys(A, B, z0, z):
+    r"""
+    Transform system into normal coordinates and calculate the diagonal matrix
+    with the eigenvalues.
+
+    As input it is necessary to define two sympy matrix of the desired system
+    from the form like:
+
+    .. math::
+        \frac{\partial \pmb{x}}{\partial z}(z, t) + A(z) \frac{\partial \pmb{x}}
+        {\partial t}(z, t) = B(z)\pmb{x}(z, t)
+
+    From this form the eigenvalues will be calculated and a transformation
+    :math:`\bar{\pmb{x}} = T(z)\pmb{x}` will be made. The resulting system after
+    the transformation in normal coordinates has following form:
+
+    .. math::
+        \frac{\partial \bar{\pmb{x}}}{\partial z}(z, t) + \Lambda(z)
+        \frac{\partial \bar{\pmb{x}}}{\partial t}(z, t) =
+        C(z)\bar{\pmb{x}}(z, t)
+
+    :param A: sp.Matrix() like described above
+    :param B: sp.Matrix() like described above
+    :param z: symbol for which will get checked if matrix depends from it
+    :return: return the matrix :math:`\Lambda(z)`, :math:`T(z)` and :math:`C(z)`
+    """
+    if not isinstance(A, sp.dense.MutableDenseMatrix):
+        raise NotImplementedError(
+            "A is not a sympy matrix!")
+    if not isinstance(B, sp.dense.MutableDenseMatrix):
+        raise NotImplementedError(
+            "B is not a sympy matrix!")
+    eigvec = A.eigenvects()
+    n = len(eigvec)
+    r = [None]*n
+    Tinv = sp.Matrix()
+    for i, vec in enumerate(eigvec[::-1]):
+        # negation so that first eigenvalue is negative
+        r[i] = -vec[-1][0]
+        # calculate the norm of the vector to normalize it
+        rsum = 0
+        for elem in r[i]:
+            rsum += elem**2
+        Tinv = sp.Matrix.hstack(Tinv, r[i]) # /sp.sqrt(rsum))
+    # calculate the left handed transformation matrix
+    T = Tinv.inv()
+    # calculate Lambda matrix
+    Lamda = T*A*Tinv
+    # calculate C matrix and look if T depends on z
+    C = T.diff(z)*Tinv + T*B*Tinv
+    # calculate characteristics
+    lamda = [None]*n
+    for i in range(n):
+        lamda[i] = Lamda[i, i].simplify()
+    char = [None]*n
+    for i in range(n):
+        # negation because we negated the right hand side
+        char[i] = -sp.Integral(lamda[i], (z, z0, z)).doit()
+    return Lamda, C, T, lamda, char

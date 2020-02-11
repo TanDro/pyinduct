@@ -1018,7 +1018,7 @@ class Base(ApproximationBasis):
         return np.array([getattr(frac, attr, None) for frac in self.fractions])
 
 
-class StackedBase(ApproximationBasis):
+class StackedBase:
     """
     Implementation of a basis vector that is obtained by stacking different
     bases onto each other. This typically occurs when the bases of coupled
@@ -1030,9 +1030,8 @@ class StackedBase(ApproximationBasis):
             In detail, these Information must contain:
 
                 - sys_name (str): Name of the system the base is associated with.
-                - order (int): Highest temporal derivative order with which the
-                    base shall be represented in the stacked base.
-                - base (:py:class:`.ApproximationBase`): The actual basis.
+                - order (int): Highest temporal derivative order with which the base shall be represented in the stacked base.
+                - base (:py:class:`.Base`): The actual basis.
     """
 
     def __init__(self, base_info):
@@ -1061,17 +1060,23 @@ class StackedBase(ApproximationBasis):
         self._size = self._cum_frac_idxs.pop(-1)
         self._weight_size = self._cum_weight_idxs.pop(-1)
 
+    def __len__(self):
+        return self._size
+
+    def __getitem__(self, item):
+        return self.fractions[item]
+
+    def is_compatible_to(self, other):
+        return False
+
     def scalar_product_hint(self):
         return NotImplemented
 
     def function_space_hint(self):
         return hash(self)
 
-    def is_compatible_to(self, other):
-        return False
-
     def scale(self, factor):
-        raise NotImplementedError("Stacked base should not be scaled.")
+        raise NotImplementedError("Stacke base should not be scaled.")
 
     def transformation_hint(self, info):
         """
